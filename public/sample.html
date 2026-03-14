@@ -1,0 +1,276 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Mat Side Scoring – Visual Clone</title>
+
+<style>
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  margin: 0;
+  background: #ffffff;
+}
+
+a {
+  color: #0066cc;
+  text-decoration: none;
+  display: block;
+  line-height: 22px;
+}
+
+.container {
+  width: 1250px;
+  margin: 10px auto;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+.sidebar {
+  width: 160px;
+  vertical-align: top;
+}
+
+.sidebar .wow {
+  background: #0066ff;
+  color: #fff;
+  text-align: center;
+  margin-top: 10px;
+  padding: 5px;
+  font-weight: bold;
+}
+
+.panel {
+  border: 1px solid #999;
+  padding: 5px;
+}
+
+.center {
+  background: #e6e6e6;
+  border: 1px solid #999;
+  vertical-align: top;
+  padding-top: 5px;
+}
+
+.title-red,
+.title-green {
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.title-red { color: red; }
+.title-green { color: green; }
+
+.penalty-table {
+  width: 100%;
+}
+.penalty-table td {
+  padding: 2px 0;
+}
+.penalty-table td.btn {
+  width: 28px;
+  text-align: center;
+}
+.penalty-red { color: red; }
+.penalty-green { color: green; }
+
+.timer-box {
+  border: 2px solid red;
+  margin-top: 5px;
+  padding: 3px;
+}
+.timer-box.green {
+  border-color: green;
+}
+
+.clock-table {
+  margin: 4px auto 2px auto;
+}
+.clock-table td {
+  padding: 0;
+}
+
+.clock-box {
+  background: red;
+  color: white;
+  font-size: 42px;
+  font-weight: bold;
+  width: 70px;
+  height: 70px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.score-table {
+  width: 200px;
+  margin: 4px auto;
+}
+.score-table td {
+  font-size: 20px;
+  font-weight: bold;
+}
+.score-red {
+  color: red;
+  text-align: left;
+}
+.score-green {
+  color: green;
+  text-align: right;
+}
+
+.comment-table {
+  width: 90%;
+  margin: 6px auto;
+}
+.comment-table td {
+  border: 1px solid #999;
+  height: 20px;
+}
+
+.center-buttons button {
+  width: 100%;
+  margin-top: 3px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<table width="100%">
+<tr>
+
+<!-- LEFT NAV + RED -->
+<td class="sidebar">
+  <a>CONFIGS</a><a>SETTINGS</a><a>SEASONS</a><a>MATCHES</a>
+  <a>ATHLETES</a><a>MATCH</a><a>RESULT</a><a>SUMMARY</a>
+  <a>HISTORY</a><a>HELP</a><a>VIRTUAL</a><a>OVERLAY</a><a>COMM</a>
+  <div class="wow">WOW!</div>
+
+  <div class="panel">
+    <div class="title-red">Unknown<br>Unattached</div>
+
+    <select><option>neutral</option></select>
+    <select><option>red</option></select>
+
+    <table class="penalty-table">
+      <tr><td class="btn">-1</td><td class="penalty-red">Caution (Ca) (0 pts)</td><td class="btn">+1</td></tr>
+      <tr><td class="btn">-2</td><td class="penalty-red">Misconduct (MC) (0 pts)</td><td class="btn">+2</td></tr>
+      <tr><td class="btn">-3</td><td class="penalty-red">Penalty 1 (P1) (1 pts)</td><td class="btn">+3</td></tr>
+      <tr><td class="btn">-4</td><td class="penalty-red">Penalty 2 (P2) (2 pts)</td><td class="btn">+4</td></tr>
+      <tr><td class="btn">-5</td><td class="penalty-red">Stalling (SW) (0 pts)</td><td class="btn">+5</td></tr>
+      <tr><td class="btn">-6</td><td class="penalty-red">Takedown 3 (T3) (3 pts)</td><td class="btn">+6</td></tr>
+    </table>
+
+    <div class="timer-box">
+      Blood Time:<br><input value="5:00"><br>
+      <button>Start</button><button>Stop</button><button>Set</button><button>Reset</button>
+    </div>
+
+    <div class="timer-box">
+      Injury Time:<br><input value="1:30"><br>
+      <button>Start</button><button>Stop</button><button>Set</button><button>Reset</button>
+    </div>
+
+    <div class="timer-box">
+      Head/Neck:<br><input value="5:00"><br>
+      <button>Start</button><button>Stop</button><button>Set</button><button>Reset</button>
+    </div>
+
+    <div class="timer-box">
+      Recovery:<br><input value="2:00"><br>
+      <button>Start</button><button>Stop</button><button>Set</button><button>Reset</button>
+    </div>
+  </div>
+</td>
+
+<!-- CENTER -->
+<td class="center" width="700">
+  <center>
+    <b>Bout 0 - 0</b><br>
+    &lt;==Prev
+    <select><option>Period 1</option></select>
+    Next==&gt;<br>
+    Clock
+
+    <table class="clock-table">
+      <tr>
+        <td class="clock-box">2</td>
+        <td class="clock-box">00</td>
+        <td class="clock-box">00</td>
+      </tr>
+    </table>
+
+    <button style="background:#00cc00">Start</button>
+    <button style="background:#ff0000;color:#fff">Stop</button>
+    <button>Set</button>
+    <button>Reset</button>
+
+    <table class="score-table">
+      <tr>
+        <td class="score-red">0</td>
+        <td class="score-green">0</td>
+      </tr>
+    </table>
+
+    <table class="comment-table">
+      <tr><td></td><td></td></tr>
+      <tr><td></td><td></td></tr>
+      <tr><td></td><td></td></tr>
+      <tr><td></td><td></td></tr>
+    </table>
+
+    <div class="center-buttons">
+      <button>Add Comment</button>
+      <button>Sound Horn</button>
+      <select><option>Blink Status</option></select>
+      <button>Reset Bout</button>
+    </div>
+  </center>
+</td>
+
+<!-- RIGHT GREEN -->
+<td class="panel" width="220" valign="top">
+  <div class="title-green">Unknown<br>Unattached</div>
+
+  <select><option>neutral</option></select>
+  <select><option>green</option></select>
+
+  <table class="penalty-table">
+    <tr><td class="btn">+1</td><td class="penalty-green">Caution (Ca) (0 pts)</td><td class="btn">-1</td></tr>
+    <tr><td class="btn">+2</td><td class="penalty-green">Misconduct (MC) (0 pts)</td><td class="btn">-2</td></tr>
+    <tr><td class="btn">+3</td><td class="penalty-green">Penalty 1 (P1) (1 pts)</td><td class="btn">-3</td></tr>
+    <tr><td class="btn">+4</td><td class="penalty-green">Penalty 2 (P2) (2 pts)</td><td class="btn">-4</td></tr>
+    <tr><td class="btn">+5</td><td class="penalty-green">Stalling (SW) (0 pts)</td><td class="btn">-5</td></tr>
+    <tr><td class="btn">+6</td><td class="penalty-green">Takedown 3 (T3) (3 pts)</td><td class="btn">-6</td></tr>
+  </table>
+
+  <div class="timer-box green">
+    Blood Time:<br><input value="5:00"><br>
+    <button>Start</button><button>Stop</button><button>Set</button><button>Reset</button>
+  </div>
+
+  <div class="timer-box green">
+    Injury Time:<br><input value="1:30"><br>
+    <button>Start</button><button>Stop</button><button>Set</button><button>Reset</button>
+  </div>
+
+  <div class="timer-box green">
+    Head/Neck:<br><input value="5:00"><br>
+    <button>Start</button><button>Stop</button><button>Set</button><button>Reset</button>
+  </div>
+
+  <div class="timer-box green">
+    Recovery:<br><input value="2:00"><br>
+    <button>Start</button><button>Stop</button><button>Set</button><button>Reset</button>
+  </div>
+</td>
+
+</tr>
+</table>
+
+</div>
+</body>
+</html>
