@@ -24,6 +24,9 @@
         <div class="form-group">
             <label for="password">Password</label>
             <input type="password" name="password" id="password" required>
+            @if(Route::has('password.request'))
+                <a href="{{ route('password.request') }}" style="display:block; margin-top:0.35rem; font-size:0.9rem;">Forgot password?</a>
+            @endif
         </div>
         <div class="form-group">
             <label><input type="checkbox" name="remember"> Remember Me</label>
