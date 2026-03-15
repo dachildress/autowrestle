@@ -160,6 +160,7 @@ class MatScoringService
     /**
      * Mark bout as completed with winner, result type, and optional match end time.
      * Also sets completed = true on the bouts table so projection and match list stay in sync.
+     * For pins, sets pin=1 and wrtime (match time M:SS) on bout rows so home Quick Pins can display time.
      */
     public function completeBout(BoutScoringState $state, ?int $winnerId, ?string $resultType = null, ?\DateTimeInterface $completedAt = null): void
     {
@@ -170,9 +171,46 @@ class MatScoringService
             'completed_at' => $completedAt,
         ]);
 
+        $boutUpdate = ['completed' => true];
+        if ($winnerId !== null && $resultType !== null && strtolower($resultType) === 'pin') {
+            $wrtime = $this->computePinMatchTime($state);
+            if ($wrtime !== null) {
+                $boutUpdate['pin'] = 1;
+                $boutUpdate['wrtime'] = $wrtime;
+            }
+        }
+
         Bout::where('Tournament_Id', $state->tournament_id)
             ->where('id', $state->bout_id)
-            ->update(['completed' => true]);
+            ->update($boutUpdate);
+    }
+
+    /**
+     * Compute match time at pin from period and clock (elapsed time). Returns "M:SS" or null if division unknown.
+     */
+    private function computePinMatchTime(BoutScoringState $state): ?string
+    {
+        $bout = Bout::where('Tournament_Id', $state->tournament_id)
+            ->where('id', $state->bout_id)
+            ->first();
+        if (! $bout || ! $bout->Division_Id) {
+            return null;
+        }
+        $divisionId = (int) $bout->Division_Id;
+        $period = max(1, (int) $state->period);
+        $clockRemaining = max(0, (int) $state->clock_seconds);
+
+        $totalSeconds = 0;
+        for ($p = 1; $p < $period; $p++) {
+            $totalSeconds += $this->periodService->getPeriodDurationByNumber($divisionId, $p);
+        }
+        $currentPeriodDuration = $this->periodService->getPeriodDurationByNumber($divisionId, $period);
+        $totalSeconds += $currentPeriodDuration - $clockRemaining;
+
+        $totalSeconds = max(0, $totalSeconds);
+        $minutes = (int) floor($totalSeconds / 60);
+        $seconds = $totalSeconds % 60;
+        return $minutes . ':' . str_pad((string) $seconds, 2, '0', STR_PAD_LEFT);
     }
 
     /**

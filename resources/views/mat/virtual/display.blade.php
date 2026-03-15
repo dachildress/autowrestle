@@ -22,29 +22,62 @@
         .virtual-name { font-size: 0.5em; text-align: center; font-weight: 600; }
         .virtual-name.red { color: #f66; }
         .virtual-name.green { color: #6f6; }
+        .virtual-extra-timers { display: flex; justify-content: center; gap: 2em; margin-top: 0.4em; font-size: 0.35em; color: #ccc; }
+        .virtual-extra-timers .virtual-timer-group { display: flex; flex-direction: column; align-items: center; gap: 0.2em; }
+        .virtual-extra-timers .virtual-timer-label { font-weight: 600; }
+        .virtual-extra-timers .virtual-timer-values { display: flex; gap: 1em; }
+        .virtual-extra-timers .virtual-timer-red { color: #f99; }
+        .virtual-extra-timers .virtual-timer-green { color: #9f9; }
     </style>
 </head>
 <body>
     @php
+        $showHeadNeck = $showHeadNeck ?? false;
+        $showRecover = $showRecover ?? false;
+        $fmtTime = function ($sec) { $sec = max(0, (int)$sec); return sprintf('%d:%02d', (int)($sec / 60), $sec % 60); };
         $swap = $initial['display_swap'] ?? false;
-        // Red always left, green always right. Scores stay in place; only names swap when scorer switches colors.
-        $leftName = $swap ? trim(($initial['green_name'] ?? '') . ' ' . ($initial['green_team'] ?? '')) : trim(($initial['red_name'] ?? '') . ' ' . ($initial['red_team'] ?? ''));
-        $rightName = $swap ? trim(($initial['red_name'] ?? '') . ' ' . ($initial['red_team'] ?? '')) : trim(($initial['green_name'] ?? '') . ' ' . ($initial['green_team'] ?? ''));
+        // Red always left, green always right. When swap: wrestler 2 (green) + his score go to left (red side), wrestler 1 (red) + his score go to right (green side).
+        $leftName = $swap ? ($initial['green_name'] ?? 'Unknown') : ($initial['red_name'] ?? 'Unknown');
+        $rightName = $swap ? ($initial['red_name'] ?? 'Unknown') : ($initial['green_name'] ?? 'Unknown');
+        $leftScore = $swap ? ($initial['green_score'] ?? 0) : ($initial['red_score'] ?? 0);
+        $rightScore = $swap ? ($initial['red_score'] ?? 0) : ($initial['green_score'] ?? 0);
     @endphp
     <div id="virtual-root" style="font-size: {{ $fontPx }}px;">
         <div class="virtual-top" id="virtual-top">{{ $boutId ? 'Bout ' . $boutId : 'n/a - 0' }}</div>
         <div class="virtual-row-three">
             <div class="virtual-col" id="virtual-col-left">
-                <div class="virtual-name-wrap"><div class="virtual-name red" id="virtual-left-name">{{ $leftName ?: 'Unknown' }}</div></div>
-                <div class="virtual-score-box red" id="virtual-left-score-box"><span class="virtual-score-num" id="virtual-left-score">{{ $initial['red_score'] ?? 0 }}</span></div>
+                <div class="virtual-name-wrap"><div class="virtual-name red" id="virtual-left-name">{{ $leftName }}</div></div>
+                <div class="virtual-score-box red" id="virtual-left-score-box"><span class="virtual-score-num" id="virtual-left-score">{{ $leftScore }}</span></div>
             </div>
             <div class="virtual-center">
                 <div class="virtual-timer" id="virtual-timer">{{ sprintf('%d:%02d', (int)(($initial['clock_seconds'] ?? 0) / 60), ($initial['clock_seconds'] ?? 0) % 60) }}</div>
                 <div class="virtual-period" id="virtual-period">{{ $periodLabel }}</div>
+                @if($showHeadNeck)
+                <div class="virtual-extra-timers" id="virtual-head-neck-row">
+                    <div class="virtual-timer-group">
+                        <span class="virtual-timer-label">Head/Neck</span>
+                        <div class="virtual-timer-values">
+                            <span class="virtual-timer-red" id="virtual-head-neck-red">{{ $fmtTime($initial['head_neck_time_red'] ?? 0) }}</span>
+                            <span class="virtual-timer-green" id="virtual-head-neck-green">{{ $fmtTime($initial['head_neck_time_green'] ?? 0) }}</span>
+                        </div>
+                    </div>
+                </div>
+                @endif
+                @if($showRecover)
+                <div class="virtual-extra-timers" id="virtual-recover-row">
+                    <div class="virtual-timer-group">
+                        <span class="virtual-timer-label">Recovery</span>
+                        <div class="virtual-timer-values">
+                            <span class="virtual-timer-red" id="virtual-recover-red">{{ $fmtTime($initial['recovery_time_red'] ?? 0) }}</span>
+                            <span class="virtual-timer-green" id="virtual-recover-green">{{ $fmtTime($initial['recovery_time_green'] ?? 0) }}</span>
+                        </div>
+                    </div>
+                </div>
+                @endif
             </div>
             <div class="virtual-col" id="virtual-col-right">
-                <div class="virtual-name-wrap"><div class="virtual-name green" id="virtual-right-name">{{ $rightName ?: 'Unknown' }}</div></div>
-                <div class="virtual-score-box green" id="virtual-right-score-box"><span class="virtual-score-num" id="virtual-right-score">{{ $initial['green_score'] ?? 0 }}</span></div>
+                <div class="virtual-name-wrap"><div class="virtual-name green" id="virtual-right-name">{{ $rightName }}</div></div>
+                <div class="virtual-score-box green" id="virtual-right-score-box"><span class="virtual-score-num" id="virtual-right-score">{{ $rightScore }}</span></div>
             </div>
         </div>
     </div>
@@ -65,15 +98,25 @@
                 .then(function(d) {
                     if (d && !d.error) {
                         var swap = !!(d.display_swap === true || d.display_swap === 1);
-                        // Red always left, green always right. Scores stay in place; only names move when scorer switches colors.
-                        document.getElementById('virtual-left-score').textContent = d.red_score;
-                        document.getElementById('virtual-right-score').textContent = d.green_score;
-                        var leftName = swap ? (d.green_name + ' ' + (d.green_team || '')).trim() : (d.red_name + ' ' + (d.red_team || '')).trim();
-                        var rightName = swap ? (d.red_name + ' ' + (d.red_team || '')).trim() : (d.green_name + ' ' + (d.green_team || '')).trim();
-                        document.getElementById('virtual-left-name').textContent = leftName || 'Unknown';
-                        document.getElementById('virtual-right-name').textContent = rightName || 'Unknown';
+                        // Red always left, green always right. When swap: WR2 + his score on left, WR1 + his score on right.
+                        var leftScore = swap ? d.green_score : d.red_score;
+                        var rightScore = swap ? d.red_score : d.green_score;
+                        var leftName = swap ? (d.green_name || 'Unknown') : (d.red_name || 'Unknown');
+                        var rightName = swap ? (d.red_name || 'Unknown') : (d.green_name || 'Unknown');
+                        document.getElementById('virtual-left-score').textContent = leftScore;
+                        document.getElementById('virtual-right-score').textContent = rightScore;
+                        document.getElementById('virtual-left-name').textContent = leftName;
+                        document.getElementById('virtual-right-name').textContent = rightName;
                         document.getElementById('virtual-timer').textContent = fmt(d.clock_seconds);
                         document.getElementById('virtual-period').textContent = periodLabels[d.period] || ('Period ' + d.period);
+                        var hnRed = document.getElementById('virtual-head-neck-red');
+                        if (hnRed) { hnRed.textContent = fmt(d.head_neck_time_red != null ? d.head_neck_time_red : 0); }
+                        var hnGreen = document.getElementById('virtual-head-neck-green');
+                        if (hnGreen) { hnGreen.textContent = fmt(d.head_neck_time_green != null ? d.head_neck_time_green : 0); }
+                        var recRed = document.getElementById('virtual-recover-red');
+                        if (recRed) { recRed.textContent = fmt(d.recovery_time_red != null ? d.recovery_time_red : 0); }
+                        var recGreen = document.getElementById('virtual-recover-green');
+                        if (recGreen) { recGreen.textContent = fmt(d.recovery_time_green != null ? d.recovery_time_green : 0); }
                         if (d.bout_id != null) {
                             document.getElementById('virtual-top').textContent = 'Bout ' + d.bout_id;
                         } else {

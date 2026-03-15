@@ -3,13 +3,20 @@
 @section('title', 'Register – ' . $tournament->TournamentName)
 
 @section('content')
-<h1>{{ $tournament->TournamentName }}</h1>
-<p><strong>Date:</strong> {{ $tournament->TournamentDate->format('l, F j, Y') }}</p>
-@if($tournament->link)
-    <p><a href="{{ url('flyers/' . $tournament->link) }}" target="_blank" rel="noopener">Tournament Flyer</a></p>
+<x-page-header :title="$tournament->TournamentName">
+    <x-slot:subtitle>
+        <strong>Date:</strong> {{ $tournament->TournamentDate->format('l, F j, Y') }}
+        @if($tournament->link)
+            — <a href="{{ url('flyers/' . $tournament->link) }}" target="_blank" rel="noopener" class="text-aw-accent hover:underline">Tournament Flyer</a>
+        @endif
+    </x-slot:subtitle>
+</x-page-header>
+
+@if(content('registration.instructions'))
+    <p class="mb-6 text-slate-600">{{ content('registration.instructions') }}</p>
 @endif
 
-<h2>My Wrestlers</h2>
+<h2 class="mb-4 text-xl font-semibold text-slate-900">My Wrestlers</h2>
 <table>
     <thead>
         <tr>
@@ -60,5 +67,5 @@
     </tbody>
 </table>
 
-<p><a href="{{ route('tournaments.show', $tournament->id) }}">Back to tournament</a></p>
+<p class="mt-6"><x-button href="{{ route('tournaments.show', $tournament->id) }}" variant="ghost">← Back to tournament</x-button></p>
 @endsection

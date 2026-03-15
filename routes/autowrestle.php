@@ -17,6 +17,7 @@ Route::get('/tournaments/{id}', [\App\Http\Controllers\TournamentController::cla
 Route::middleware(['auth'])->group(function () {
     Route::get('/mat', [\App\Http\Controllers\MatDashboardController::class, 'index'])->name('mat.dashboard');
     Route::get('/mat/settings', [\App\Http\Controllers\MatSettingsController::class, 'index'])->name('mat.settings');
+    Route::post('/mat/settings', [\App\Http\Controllers\MatSettingsController::class, 'store'])->name('mat.settings.store');
     Route::get('/mat/virtual', [\App\Http\Controllers\MatVirtualController::class, 'settings'])->name('mat.virtual');
     Route::get('/mat/virtual/display', [\App\Http\Controllers\MatVirtualController::class, 'display'])->name('mat.virtual.display');
     Route::get('/mat/virtual/current-state', [\App\Http\Controllers\MatVirtualController::class, 'currentState'])->name('mat.virtual.current-state');

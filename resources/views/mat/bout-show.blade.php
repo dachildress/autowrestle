@@ -1,4 +1,4 @@
-@extends('layouts.autowrestle')
+@extends('layouts.mat')
 
 @section('title', 'Bout ' . $boutId . ' – Mat-side scoring')
 
@@ -39,8 +39,6 @@
     .mat-scoring .timer-block .label { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem; }
     .mat-scoring .timer-block .display { font-family: monospace; font-size: 1.35rem; margin: 0.25rem 0; }
     .mat-scoring .timer-block .timer-btns { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
-    .mat-scoring .center-scores { display: flex; justify-content: space-around; gap: 1rem; margin: 0.75rem 0; }
-    .mat-scoring .center-scores .score-box { font-size: 2rem; font-weight: 700; }
     .mat-events { margin-top: 1.5rem; }
     .mat-events h3 { margin-bottom: 0.5rem; }
     .mat-events ul { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 0.5rem; }
@@ -127,6 +125,7 @@
                 <button type="button" class="btn btn-timer-reset" data-timer="injury_time_red" data-default="90">Reset</button>
             </div>
         </div>
+        @if($showHeadNeck ?? false)
         <div class="timer-block" data-timer="head_neck_time_red">
             <div class="label">Head/Neck:</div>
             <div class="display" id="head-neck-red">{{ $fmtTime($state->head_neck_time_red) }}</div>
@@ -137,6 +136,8 @@
                 <button type="button" class="btn btn-timer-reset" data-timer="head_neck_time_red" data-default="300">Reset</button>
             </div>
         </div>
+        @endif
+        @if($showRecover ?? false)
         <div class="timer-block" data-timer="recovery_time_red">
             <div class="label">Recovery:</div>
             <div class="display" id="recovery-red">{{ $fmtTime($state->recovery_time_red) }}</div>
@@ -147,6 +148,7 @@
                 <button type="button" class="btn btn-timer-reset" data-timer="recovery_time_red" data-default="120">Reset</button>
             </div>
         </div>
+        @endif
     </div>
 
     {{-- Center --}}
@@ -171,10 +173,6 @@
             <button type="button" class="btn btn-danger" id="clock-stop">Stop</button>
             <button type="button" class="btn" id="clock-set">Set</button>
             <button type="button" class="btn" id="clock-reset">Reset</button>
-        </div>
-        <div class="center-scores">
-            <span class="score-box" style="color: #f99;" id="center-red">{{ $state->red_score }}</span>
-            <span class="score-box" style="color: #9f9;" id="center-green">{{ $state->green_score }}</span>
         </div>
         <div style="margin-top: 0.75rem;">
             <label for="comment-input">Comment</label>
@@ -245,6 +243,7 @@
                 <button type="button" class="btn btn-timer-reset" data-timer="injury_time_green" data-default="90">Reset</button>
             </div>
         </div>
+        @if($showHeadNeck ?? false)
         <div class="timer-block" data-timer="head_neck_time_green">
             <div class="label">Head/Neck:</div>
             <div class="display" id="head-neck-green">{{ $fmtTime($state->head_neck_time_green) }}</div>
@@ -255,6 +254,8 @@
                 <button type="button" class="btn btn-timer-reset" data-timer="head_neck_time_green" data-default="300">Reset</button>
             </div>
         </div>
+        @endif
+        @if($showRecover ?? false)
         <div class="timer-block" data-timer="recovery_time_green">
             <div class="label">Recovery:</div>
             <div class="display" id="recovery-green">{{ $fmtTime($state->recovery_time_green) }}</div>
@@ -265,6 +266,7 @@
                 <button type="button" class="btn btn-timer-reset" data-timer="recovery_time_green" data-default="120">Reset</button>
             </div>
         </div>
+        @endif
     </div>
 </div>
 
@@ -309,8 +311,6 @@
     function applyState(d) {
         document.getElementById('red-score').textContent = d.red_score;
         document.getElementById('green-score').textContent = d.green_score;
-        document.getElementById('center-red').textContent = d.red_score;
-        document.getElementById('center-green').textContent = d.green_score;
         document.getElementById('clock-display').textContent = fmt(d.clock_seconds);
         document.getElementById('period-display').value = d.period;
         clockSec = d.clock_seconds;

@@ -56,6 +56,13 @@ class MatVirtualController extends Controller
 
         $layout = $request->query('layout', 'Folkstyle');
         $fontPx = max(24, min(200, (int) $request->query('font', 84)));
+        // Head/Neck and Recovery: only show when user checked them on Settings and saved (default false = hidden)
+        $showHeadNeck = $request->query('show_head_neck') !== null
+            ? $request->query('show_head_neck', '0') === '1'
+            : $request->session()->get('mat_display_show_head_neck', false);
+        $showRecover = $request->query('show_recover') !== null
+            ? $request->query('show_recover', '0') === '1'
+            : $request->session()->get('mat_display_show_recover', false);
 
         $stateUrl = route('mat.virtual.current-state');
         $initial = null;
@@ -78,6 +85,10 @@ class MatVirtualController extends Controller
                         'red_team' => $state->redWrestler ? ($state->redWrestler->wr_club ?? 'Unattached') : 'Unattached',
                         'green_name' => $state->greenWrestler ? trim($state->greenWrestler->wr_first_name . ' ' . $state->greenWrestler->wr_last_name) : 'Unknown',
                         'green_team' => $state->greenWrestler ? ($state->greenWrestler->wr_club ?? 'Unattached') : 'Unattached',
+                        'head_neck_time_red' => $state->head_neck_time_red ?? 0,
+                        'head_neck_time_green' => $state->head_neck_time_green ?? 0,
+                        'recovery_time_red' => $state->recovery_time_red ?? 0,
+                        'recovery_time_green' => $state->recovery_time_green ?? 0,
                     ];
                 }
             }
@@ -94,19 +105,28 @@ class MatVirtualController extends Controller
                 'red_team' => 'Unattached',
                 'green_name' => 'Unknown',
                 'green_team' => 'Unattached',
+                'head_neck_time_red' => 0,
+                'head_neck_time_green' => 0,
+                'recovery_time_red' => 0,
+                'recovery_time_green' => 0,
             ];
         }
 
         $periodLabels = [1 => 'Period 1', 2 => 'Period 2', 3 => 'Period 3', 4 => 'OT1', 5 => 'OT2', 6 => 'OT3'];
 
-        return view('mat.virtual.display', [
-            'boutId' => $boutId,
-            'layout' => $layout,
-            'fontPx' => $fontPx,
-            'stateUrl' => $stateUrl,
-            'initial' => $initial,
-            'periodLabel' => $periodLabels[$initial['period']] ?? 'Period ' . $initial['period'],
-        ]);
+        return response()
+            ->view('mat.virtual.display', [
+                'boutId' => $boutId,
+                'layout' => $layout,
+                'fontPx' => $fontPx,
+                'stateUrl' => $stateUrl,
+                'initial' => $initial,
+                'periodLabel' => $periodLabels[$initial['period']] ?? 'Period ' . $initial['period'],
+                'showHeadNeck' => $showHeadNeck,
+                'showRecover' => $showRecover,
+            ])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache');
     }
 
     /**
@@ -133,6 +153,10 @@ class MatVirtualController extends Controller
                 'red_team' => 'Unattached',
                 'green_name' => 'Unknown',
                 'green_team' => 'Unattached',
+                'head_neck_time_red' => 0,
+                'head_neck_time_green' => 0,
+                'recovery_time_red' => 0,
+                'recovery_time_green' => 0,
             ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
         }
         $state = BoutScoringState::where('tournament_id', $tid)->where('bout_id', $boutId)->first();
@@ -148,6 +172,10 @@ class MatVirtualController extends Controller
                 'red_team' => 'Unattached',
                 'green_name' => 'Unknown',
                 'green_team' => 'Unattached',
+                'head_neck_time_red' => 0,
+                'head_neck_time_green' => 0,
+                'recovery_time_red' => 0,
+                'recovery_time_green' => 0,
             ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
         }
         $state->load(['redWrestler', 'greenWrestler']);
@@ -162,6 +190,10 @@ class MatVirtualController extends Controller
             'red_team' => $state->redWrestler ? ($state->redWrestler->wr_club ?? 'Unattached') : 'Unattached',
             'green_name' => $state->greenWrestler ? trim($state->greenWrestler->wr_first_name . ' ' . $state->greenWrestler->wr_last_name) : 'Unknown',
             'green_team' => $state->greenWrestler ? ($state->greenWrestler->wr_club ?? 'Unattached') : 'Unattached',
+            'head_neck_time_red' => $state->head_neck_time_red ?? 0,
+            'head_neck_time_green' => $state->head_neck_time_green ?? 0,
+            'recovery_time_red' => $state->recovery_time_red ?? 0,
+            'recovery_time_green' => $state->recovery_time_green ?? 0,
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 

@@ -1,0 +1,270 @@
+@import 'tailwindcss';
+
+/* Scan Blade views for Tailwind classes (exclude mat - they use layouts.mat) */
+@source '../views/layouts/autowrestle.blade.php';
+@source '../views/auth/**/*.blade.php';
+@source '../views/home.blade.php';
+@source '../views/tournaments/**/*.blade.php';
+@source '../views/wrestlers/**/*.blade.php';
+@source '../views/manage/**/*.blade.php';
+@source '../views/components/**/*.blade.php';
+
+@theme inline {
+    /* Sports platform: navy base, strong accent */
+    --color-aw-primary: #0f172a;
+    --color-aw-secondary: #1e293b;
+    --color-aw-accent: #dc2626;
+    --color-aw-accent-gold: #d4a012;
+    --color-aw-muted: #64748b;
+    --color-aw-border: #e2e8f0;
+    --color-aw-surface: #f1f5f9;
+}
+
+@layer base {
+    * {
+        @apply box-border;
+    }
+    body {
+        @apply m-0 bg-aw-surface text-slate-900 antialiased leading-normal;
+        font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    }
+    a {
+        @apply text-slate-900 no-underline;
+    }
+    a:hover {
+        @apply text-aw-accent underline;
+    }
+}
+
+/* Legacy component classes – keep for existing Blade views; styled with design system */
+@layer components {
+    .container {
+        @apply max-w-6xl mx-auto px-4;
+    }
+    .main {
+        @apply px-4 pb-8;
+    }
+    .nav-bar {
+        @apply min-h-[60px] mb-6 border-0 bg-aw-primary;
+    }
+    .nav-bar .wrap {
+        @apply max-w-6xl mx-auto px-4 flex items-center min-h-[60px] gap-4 flex-wrap;
+    }
+    .nav-bar a {
+        @apply text-white no-underline py-[19px] px-2.5 inline-block;
+    }
+    .nav-bar a:hover {
+        @apply text-red-400 bg-transparent;
+    }
+    .nav-bar .brand {
+        @apply font-bold text-lg py-[11px] pr-4 pl-0;
+    }
+    .nav-bar .spacer {
+        @apply flex-1;
+    }
+    .nav-bar .nav-dropdown-toggle {
+        @apply text-white no-underline py-[19px] px-2.5 inline-flex items-center gap-1 bg-transparent border-0 cursor-pointer;
+        font: inherit;
+    }
+    .nav-bar .nav-dropdown-toggle:hover,
+    .nav-bar form button:hover {
+        @apply text-red-400;
+    }
+    .nav-bar form button {
+        @apply text-white bg-transparent border-0 cursor-pointer py-[19px] px-2.5;
+        font: inherit;
+    }
+    .nav-dropdown {
+        @apply relative;
+    }
+    .nav-dropdown-toggle::after {
+        content: '';
+        @apply border-4 border-transparent border-t-current ml-0.5;
+    }
+    .nav-dropdown-menu {
+        @apply absolute top-full left-0 min-w-[180px] bg-white border border-slate-200 rounded shadow-lg list-none m-0 py-1 z-[1000] hidden;
+    }
+    .nav-dropdown:hover > .nav-dropdown-menu {
+        @apply block;
+    }
+    .nav-dropdown-menu a {
+        @apply text-slate-900 p-2 px-4 block whitespace-nowrap;
+    }
+    .nav-dropdown-menu a:hover {
+        @apply bg-slate-100 text-aw-accent;
+    }
+    .nav-dropdown-sub {
+        @apply relative;
+    }
+    .nav-dropdown-sub .nav-dropdown-menu {
+        @apply left-full top-0 hidden;
+    }
+    .nav-dropdown-sub:hover .nav-dropdown-menu {
+        @apply block;
+    }
+    .nav-dropdown-sub > a::after {
+        content: '';
+        @apply float-right border-4 border-transparent border-l-current mt-1;
+    }
+    .nav-bar .nav-dropdown-menu form {
+        @apply p-0;
+    }
+    .nav-bar .nav-dropdown-menu button {
+        @apply w-full text-left p-2 px-4 bg-transparent border-0 cursor-pointer text-slate-900;
+        font: inherit;
+    }
+    .nav-bar .nav-dropdown-menu button:hover {
+        @apply bg-slate-100 text-aw-accent;
+    }
+    .nav-dropdown-menu a.nav-link-disabled {
+        @apply text-slate-400 cursor-not-allowed pointer-events-none no-underline p-2 px-4 block;
+    }
+    .panel {
+        @apply mb-6 bg-white border border-slate-200 rounded shadow-sm;
+    }
+    .panel-heading {
+        @apply py-2.5 px-4 bg-slate-100 border-b border-slate-200 rounded-t text-slate-900 text-base font-semibold;
+    }
+    .panel-body {
+        @apply p-4;
+    }
+    .panel-title, h1 {
+        @apply m-0 mb-4 text-slate-900 text-xl font-bold;
+    }
+    .panel-heading + .panel-body h1 {
+        @apply mt-0;
+    }
+    table {
+        @apply border-collapse w-full;
+    }
+    th, td {
+        @apply border border-slate-200 py-2 px-3 text-left;
+    }
+    th {
+        @apply bg-slate-100 font-semibold text-slate-900;
+    }
+    tbody tr:nth-child(odd) {
+        @apply bg-slate-200;
+    }
+    tbody tr:nth-child(even) {
+        @apply bg-white;
+    }
+    .table-dark thead th {
+        @apply bg-aw-primary text-white border-aw-primary;
+    }
+    .error, .error-list {
+        @apply text-red-600;
+    }
+    .error-list {
+        @apply mb-4 pl-5;
+    }
+    .success {
+        @apply text-green-600;
+    }
+    .btn {
+        @apply inline-block font-bold no-underline py-1.5 px-3 border border-slate-700 rounded cursor-pointer bg-slate-600 text-white;
+    }
+    .btn:hover {
+        @apply bg-slate-500 text-white;
+    }
+    .btn-primary {
+        @apply bg-aw-primary border-aw-primary;
+    }
+    .btn-primary:hover {
+        @apply bg-slate-800 text-white;
+    }
+    .btn-block {
+        @apply block text-center;
+    }
+    .btn-success {
+        @apply bg-green-600 border-green-600 text-white;
+    }
+    .btn-success:hover {
+        @apply bg-green-700 text-white;
+    }
+    .btn-danger {
+        @apply bg-red-600 border-red-600 text-white;
+    }
+    .btn-danger:hover {
+        @apply bg-red-700 text-white;
+    }
+    .btn-info {
+        @apply bg-blue-600 border-blue-600 text-white;
+    }
+    .btn-info:hover {
+        @apply bg-blue-700 text-white;
+    }
+    .form-horizontal .form-group {
+        @apply mb-4 flex flex-wrap items-center gap-2;
+    }
+    .form-horizontal .form-group label {
+        @apply w-[140px] shrink-0;
+    }
+    .form-horizontal .form-group input,
+    .form-horizontal .form-group select {
+        @apply flex-1 min-w-[180px] py-2 px-2 border border-slate-200 rounded;
+    }
+    .form-horizontal .form-actions {
+        @apply mt-4 pl-[140px];
+    }
+    .row {
+        @apply flex flex-wrap -mx-4;
+    }
+    .row .col {
+        @apply px-4 flex-1 min-w-0;
+    }
+    .row .col-md-3 {
+        @apply flex-[0_0_25%] max-w-[25%] px-4;
+    }
+    .row .col-md-6 {
+        @apply flex-[0_0_50%] max-w-[50%] px-4;
+    }
+    @media (max-width: 768px) {
+        .row .col-md-3, .row .col-md-6 {
+            @apply flex-[0_0_100%] max-w-full;
+        }
+    }
+    .auth-box {
+        @apply max-w-md;
+    }
+    .auth-box .form-horizontal .form-group label {
+        @apply w-[120px];
+    }
+    .auth-box .form-actions {
+        @apply pl-0;
+    }
+    .group-tabs, .viewgroups-tabs {
+        @apply list-none mb-4 p-0 flex flex-row flex-wrap gap-2;
+    }
+    .group-tabs li, .viewgroups-tabs li {
+        @apply m-0 p-0 flex-none inline-block;
+    }
+    .group-tabs li a, .group-tabs li strong, .viewgroups-tabs li a, .viewgroups-tabs li strong {
+        @apply inline-block py-2 px-4 bg-slate-100 border border-slate-300 rounded text-slate-900 no-underline;
+    }
+    .group-tabs li a:hover, .viewgroups-tabs li a:hover {
+        @apply bg-slate-200;
+    }
+    .group-tabs li.active strong, .viewgroups-tabs li.active strong {
+        @apply bg-aw-primary text-white border-aw-primary;
+    }
+    /* Backend (manage) theme */
+    body.app-backend {
+        @apply bg-sky-50;
+    }
+    body.app-backend .nav-bar {
+        @apply bg-sky-600;
+    }
+    body.app-backend .nav-bar a:hover,
+    body.app-backend .nav-bar .nav-dropdown-toggle:hover,
+    body.app-backend .nav-bar form button:hover {
+        @apply text-slate-900;
+    }
+    body.app-backend .panel-heading {
+        @apply bg-sky-100 border-sky-200;
+    }
+    body.app-backend .group-tabs li.active strong,
+    body.app-backend .viewgroups-tabs li.active strong {
+        @apply bg-sky-600 border-sky-600;
+    }
+}

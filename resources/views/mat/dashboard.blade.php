@@ -1,4 +1,4 @@
-@extends('layouts.autowrestle')
+@extends('layouts.mat')
 
 @section('title', 'Mat dashboard')
 @section('panel_title', 'Mat dashboard')

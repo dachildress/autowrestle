@@ -99,6 +99,8 @@ class MatBoutController extends Controller
             'initialClockSeconds' => $initialClockSeconds,
             'periodDurations' => $periodDurations,
             'events' => $events,
+            'showHeadNeck' => $request->session()->get('mat_display_show_head_neck', false),
+            'showRecover' => $request->session()->get('mat_display_show_recover', false),
         ]);
     }
 

@@ -20,6 +20,7 @@ class Tournament extends Model
         'message',
         'AllowDouble',
         'status',
+        'pending_approval',
         'OpenDate',
         'ViewWrestlers',
         'Type',
@@ -28,7 +29,55 @@ class Tournament extends Model
     protected $casts = [
         'TournamentDate' => 'date',
         'OpenDate' => 'date',
+        'pending_approval' => 'boolean',
     ];
+
+    /**
+     * Scope: tournament is in the future (or today), registration is open, and approved (visible to public).
+     * Use for home page and public tournament list.
+     */
+    public function scopeUpcomingAndOpen($query)
+    {
+        $today = now()->startOfDay();
+        return $query
+            ->where('pending_approval', false)
+            ->whereDate('TournamentDate', '>=', $today)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('OpenDate')
+                    ->orWhereDate('OpenDate', '<=', $today);
+            });
+    }
+
+    /** True if tournament is waiting for admin (level 0) approval. */
+    public function isPendingApproval(): bool
+    {
+        return (bool) $this->pending_approval;
+    }
+
+    /** Mark tournament as approved (visible, registration allowed if dates allow). */
+    public function approve(): void
+    {
+        $this->update(['pending_approval' => false]);
+    }
+
+    /** True if registration is allowed: not past tournament date and on or after open date. */
+    public function isRegistrationOpen(): bool
+    {
+        $today = now()->startOfDay();
+        if ($this->TournamentDate && $this->TournamentDate->startOfDay()->lt($today)) {
+            return false;
+        }
+        if ($this->OpenDate && $this->OpenDate->startOfDay()->gt($today)) {
+            return false;
+        }
+        return true;
+    }
+
+    /** True if tournament date has passed. */
+    public function isPast(): bool
+    {
+        return $this->TournamentDate && $this->TournamentDate->startOfDay()->lt(now()->startOfDay());
+    }
 
     public function tournamentType(): BelongsTo
     {

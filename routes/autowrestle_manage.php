@@ -10,10 +10,20 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->prefix('tournaments/manage')->name('manage.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Manage\ManageTournamentController::class, 'index'])->name('tournaments.index');
+    Route::get('/create', [\App\Http\Controllers\Manage\ManageTournamentController::class, 'create'])->name('tournaments.create');
+    Route::post('/store', [\App\Http\Controllers\Manage\ManageTournamentController::class, 'store'])->name('tournaments.store');
+    Route::post('/{id}/approve', [\App\Http\Controllers\Manage\ManageTournamentController::class, 'approve'])->name('tournaments.approve')->where('id', '[0-9]+');
+    Route::get('/{id}/users', [\App\Http\Controllers\Manage\ManageTournamentController::class, 'users'])->name('tournaments.users')->where('id', '[0-9]+');
+    Route::post('/{id}/users', [\App\Http\Controllers\Manage\ManageTournamentController::class, 'addUser'])->name('tournaments.users.store')->where('id', '[0-9]+');
+    Route::post('/{id}/users/remove', [\App\Http\Controllers\Manage\ManageTournamentController::class, 'removeUser'])->name('tournaments.users.remove')->where('id', '[0-9]+');
     Route::get('/{id}/view', [\App\Http\Controllers\Manage\ManageTournamentController::class, 'viewSummary'])->name('view.summary')->where('id', '[0-9]+');
     Route::get('/{id}/edit', [\App\Http\Controllers\Manage\ManageTournamentController::class, 'edit'])->name('tournaments.edit')->where('id', '[0-9]+');
     Route::post('/{id}/edit', [\App\Http\Controllers\Manage\ManageTournamentController::class, 'update'])->name('tournaments.update')->where('id', '[0-9]+');
     Route::get('/{id}', [\App\Http\Controllers\Manage\ManageTournamentController::class, 'show'])->name('tournaments.show')->where('id', '[0-9]+');
+
+    Route::get('content', [\App\Http\Controllers\Manage\SiteContentController::class, 'index'])->name('content.index');
+    Route::get('content/{key}/edit', [\App\Http\Controllers\Manage\SiteContentController::class, 'edit'])->name('content.edit')->where('key', '[a-zA-Z0-9._-]+');
+    Route::post('content/{key}', [\App\Http\Controllers\Manage\SiteContentController::class, 'update'])->name('content.update')->where('key', '[a-zA-Z0-9._-]+');
 
     Route::get('scorers', [\App\Http\Controllers\Manage\ManageScorerController::class, 'index'])->name('scorers.index');
     Route::get('scorers/create', [\App\Http\Controllers\Manage\ManageScorerController::class, 'create'])->name('scorers.create');
@@ -23,6 +33,14 @@ Route::middleware(['auth'])->prefix('tournaments/manage')->name('manage.')->grou
     Route::delete('scorers/{id}', [\App\Http\Controllers\Manage\ManageScorerController::class, 'destroy'])->name('scorers.destroy')->where('id', '[0-9]+');
 
     Route::prefix('{tid}')->where(['tid' => '[0-9]+'])->group(function () {
+        Route::get('reports', [\App\Http\Controllers\Manage\ReportsController::class, 'index'])->name('reports.index');
+        Route::get('reports/completed', [\App\Http\Controllers\Manage\ReportsController::class, 'completed'])->name('reports.completed');
+        Route::get('reports/groups', [\App\Http\Controllers\Manage\ReportsController::class, 'groups'])->name('reports.groups');
+        Route::get('reports/groups/{gid}', [\App\Http\Controllers\Manage\ReportsController::class, 'groupShow'])->name('reports.groups.show')->where('gid', '[0-9]+');
+        Route::get('reports/brackets', [\App\Http\Controllers\Manage\ReportsController::class, 'brackets'])->name('reports.brackets');
+        Route::get('reports/brackets/{bid}', [\App\Http\Controllers\Manage\ReportsController::class, 'bracketShow'])->name('reports.brackets.show')->where('bid', '[0-9]+');
+        Route::get('reports/wrestlers', [\App\Http\Controllers\Manage\ReportsController::class, 'wrestlers'])->name('reports.wrestlers');
+
         Route::get('divisions', [\App\Http\Controllers\Manage\ManageDivisionController::class, 'index'])->name('divisions.index');
         Route::get('divisions/create', [\App\Http\Controllers\Manage\ManageDivisionController::class, 'create'])->name('divisions.create');
         Route::post('divisions', [\App\Http\Controllers\Manage\ManageDivisionController::class, 'store'])->name('divisions.store');

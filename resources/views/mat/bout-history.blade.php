@@ -1,4 +1,4 @@
-@extends('layouts.autowrestle')
+@extends('layouts.mat')
 
 @section('title', 'Summary – Bout ' . $boutId)
 @section('panel_title', 'Summary – Bout ' . $boutId)

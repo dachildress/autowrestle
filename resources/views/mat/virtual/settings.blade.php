@@ -1,4 +1,4 @@
-@extends('layouts.autowrestle')
+@extends('layouts.mat')
 
 @section('title', 'Virtual display – Settings')
 @section('panel_title', 'Settings')
@@ -35,7 +35,7 @@
         var layout = document.getElementById('virtual-layout').value || 'Folkstyle';
         var font = document.getElementById('virtual-font').value || '84';
         var url = '{{ route("mat.virtual.display") }}?layout=' + encodeURIComponent(layout) + '&font=' + encodeURIComponent(font);
-        window.location.href = url;
+        window.open(url, 'virtual', 'width=640,height=480,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes');
     };
     </script>
 @endif

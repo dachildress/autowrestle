@@ -1,4 +1,4 @@
-@extends('layouts.autowrestle')
+@extends('layouts.mat')
 
 @section('title', 'Results – Bout ' . $boutId)
 

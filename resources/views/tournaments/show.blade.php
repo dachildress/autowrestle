@@ -5,6 +5,9 @@
 
 @section('content')
 <p><strong>Date:</strong> {{ $tournament->TournamentDate->format('l, F j, Y') }}</p>
+@if($tournament->link)
+    <p><a href="{{ asset('flyers/' . $tournament->link) }}" target="_blank" rel="noopener" class="text-aw-accent hover:underline">Tournament Flyer</a></p>
+@endif
 @auth
     @if((int) $tournament->status !== 2)
         <p><a href="{{ route('tournaments.register', $tournament->id) }}" class="btn btn-block">Register for this tournament</a></p>
@@ -26,6 +29,7 @@
     </ul>
 @endif
 
+@if($tournament->ViewWrestlers)
 <h2 style="margin-top:1rem;">Registered Wrestlers</h2>
 @if($tournament->tournamentWrestlers->isEmpty())
     <p>No wrestlers registered yet.</p>
@@ -50,5 +54,8 @@
             @endforeach
         </tbody>
     </table>
+@endif
+@else
+<p class="mt-4 text-slate-600">Registered wrestlers are not displayed for this tournament.</p>
 @endif
 @endsection

@@ -22,6 +22,13 @@ class RegistrationController extends Controller
         if ((int) $tournament->status === 2) {
             return redirect()->route('tournaments.register.locked');
         }
+        if ($tournament->isPast()) {
+            return redirect()->route('tournaments.list')->with('error', 'Registration is closed; the tournament date has passed.');
+        }
+        if (! $tournament->isRegistrationOpen()) {
+            $openDate = $tournament->OpenDate ? $tournament->OpenDate->format('F j, Y') : '';
+            return redirect()->route('tournaments.list')->with('error', $openDate ? "Registration opens on {$openDate}." : 'Registration is not open for this tournament.');
+        }
 
         $userId = $request->user()->id;
         $wrestlers = Wrestler::where('user_id', $userId)
@@ -89,6 +96,9 @@ class RegistrationController extends Controller
         if ((int) $tournament->status === 2) {
             return redirect()->route('tournaments.register', $tid)->with('error', 'Tournament is locked.');
         }
+        if ($tournament->isPast() || ! $tournament->isRegistrationOpen()) {
+            return redirect()->route('tournaments.list')->with('error', 'Registration is closed or not open for this tournament.');
+        }
 
         $weight = (int) $request->input('wr_weight');
         $wrestler->wr_weight = $weight;
@@ -110,8 +120,9 @@ class RegistrationController extends Controller
             ])->withInput();
         }
 
-        $brackets = $request->input('brackets', 1);
-        $brackets = (int) $brackets === 2 ? 2 : 1;
+        $allowDouble = $tournament->AllowDouble === '1' || $tournament->AllowDouble === true;
+        $brackets = (int) $request->input('brackets', 1);
+        $brackets = $allowDouble && $brackets === 2 ? 2 : 1;
 
         for ($i = 0; $i < $brackets; $i++) {
             TournamentWrestler::create([
@@ -137,6 +148,9 @@ class RegistrationController extends Controller
         $tournament = Tournament::findOrFail($tid);
         if ((int) $tournament->status === 2) {
             return redirect()->route('tournaments.register', $tid)->with('error', 'Tournament is locked.');
+        }
+        if ($tournament->isPast()) {
+            return redirect()->route('tournaments.list')->with('error', 'The tournament date has passed.');
         }
 
         $wrestler = Wrestler::where('id', $wid)->where('user_id', $request->user()->id)->firstOrFail();

@@ -12,7 +12,7 @@ class TournamentController extends Controller
 {
     public function current(): View
     {
-        $tournaments = Tournament::orderBy('TournamentDate', 'desc')->get();
+        $tournaments = Tournament::upcomingAndOpen()->orderBy('TournamentDate', 'asc')->get();
         return view('tournaments.list', compact('tournaments'));
     }
 
