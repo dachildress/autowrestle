@@ -5,7 +5,7 @@
 @section('content')
 {{-- Hero: editable via Site content in admin --}}
 <section class="relative mb-8 overflow-hidden rounded-xl bg-aw-primary px-6 py-12 text-white md:py-16">
-    @if(site_content_image('home.hero.image'))
+    @if(function_exists('site_content_image') && site_content_image('home.hero.image'))
         <img src="{{ site_content_image('home.hero.image') }}" alt="" class="absolute inset-0 h-full w-full object-cover opacity-30">
     @endif
     <div class="relative">

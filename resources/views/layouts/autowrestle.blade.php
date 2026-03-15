@@ -14,7 +14,7 @@
     <nav class="nav-bar">
         <div class="wrap">
             <a href="{{ route('home') }}" class="brand">
-            @if(site_content_image('site.logo'))
+            @if(function_exists('site_content_image') && site_content_image('site.logo'))
                 <img src="{{ site_content_image('site.logo') }}" alt="{{ config('app.name') }}" class="h-8 max-h-[40px] w-auto">
             @else
                 AutoWrestle
