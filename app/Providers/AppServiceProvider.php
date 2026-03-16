@@ -32,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
     /**
      * When inside a tournament manage area (route has tid), share tournament and divisions
      * so the layout can render Tournament, View, Bracket, Bout, Print dropdowns.
+     * Only share when the user is allowed to manage this tournament (admin or in tournament users).
      */
     protected function shareManageNavData(): void
     {
@@ -44,7 +45,12 @@ class AppServiceProvider extends ServiceProvider
                 'divisions' => fn ($q) => $q->orderBy('id'),
                 'divisions.divGroups' => fn ($q) => $q->where('Tournament_Id', $tid)->orderBy('id'),
             ])->find($tid);
-            if ($tournament) {
+            if (! $tournament) {
+                return;
+            }
+            $user = request()->user();
+            $canManageTournament = $user->isAdmin() || $tournament->users()->where('User_id', $user->id)->exists();
+            if ($canManageTournament) {
                 $view->with(compact('tournament'));
                 $view->with('manageNav', true);
             }

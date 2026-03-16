@@ -22,8 +22,8 @@
             @endif
             </a>
             <a href="{{ route('home') }}">Home</a>
-            @if(isset($manageNav) && $manageNav && isset($tournament))
-                {{-- Tournament manage nav: dropdowns for Tournament, View, Bracket, Bout, Print --}}
+            @if(isset($manageNav) && $manageNav && isset($tournament) && auth()->check() && (auth()->user()->isAdmin() || $tournament->users()->where('User_id', auth()->id())->exists()))
+                {{-- Tournament manage nav: only for tournament admins (admin or user with tournament access) --}}
                 <span class="nav-dropdown">
                     <span class="nav-dropdown-toggle">Tournament</span>
                     <ul class="nav-dropdown-menu">
@@ -190,7 +190,9 @@
                         <a href="{{ route('mat.settings') }}">Settings</a>
                     @else
                         <a href="{{ route('wrestlers.index') }}">My Wrestlers</a>
-                        <a href="{{ route('manage.tournaments.index') }}">Manage</a>
+                        @if(auth()->user()->isAdmin() || auth()->user()->managedTournaments()->exists())
+                            <a href="{{ route('manage.tournaments.index') }}">Manage</a>
+                        @endif
                     @endif
                 @endauth
             @endif
@@ -212,12 +214,16 @@
                         @else
                             <li><a href="{{ route('password.change') }}">Change password</a></li>
                             <li><a href="{{ route('wrestlers.index') }}">Manage Wrestlers</a></li>
-                            <li><a href="{{ route('manage.tournaments.index') }}">Manage a Tournament</a></li>
+                            @if(auth()->user()->isAdmin() || auth()->user()->managedTournaments()->exists())
+                                <li><a href="{{ route('manage.tournaments.index') }}">Manage a Tournament</a></li>
+                            @endif
                             @if(auth()->user()->isAdmin())
                             <li><a href="{{ route('manage.scorers.index') }}">Scorer users</a></li>
                             <li><a href="{{ route('manage.content.index') }}">Site content</a></li>
                             @endif
-                            <li><a href="#">Add New Team</a></li>
+                            @if(auth()->user()->isAdmin() || auth()->user()->managedTournaments()->exists())
+                                <li><a href="#">Add New Team</a></li>
+                            @endif
                             <li><a href="{{ url('/logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a></li>
                         @endif
                     </ul>

@@ -37,6 +37,16 @@
             <p class="mt-1 text-xs text-slate-500">The tournament will not appear on the home page before this date.</p>
         @endif
     </div>
+    <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+            <label for="city" class="block text-sm font-medium text-slate-700">City</label>
+            <input type="text" name="city" id="city" value="{{ old('city', $tournament?->city) }}" maxlength="100" class="mt-1 block w-full rounded-md border-slate-300 text-sm">
+        </div>
+        <div>
+            <label for="state" class="block text-sm font-medium text-slate-700">State</label>
+            <input type="text" name="state" id="state" value="{{ old('state', $tournament?->state) }}" maxlength="50" class="mt-1 block w-full rounded-md border-slate-300 text-sm">
+        </div>
+    </div>
     <div>
         <label for="message" class="block text-sm font-medium text-slate-700">Message</label>
         <textarea name="message" id="message" rows="4" class="mt-1 block w-full rounded-md border-slate-300 text-sm">{{ old('message', $tournament?->message) }}</textarea>

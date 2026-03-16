@@ -21,7 +21,8 @@
                     <tr class="border-b border-slate-200 bg-slate-100">
                         <th class="px-4 py-3 text-left text-sm font-semibold text-slate-900">Name</th>
                         <th class="px-4 py-3 text-left text-sm font-semibold text-slate-900">Date</th>
-                        <th class="px-4 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-slate-900">City</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-slate-900">State</th>
                         <th class="px-4 py-3 text-right text-sm font-semibold text-slate-900">Actions</th>
                     </tr>
                 </thead>
@@ -30,7 +31,8 @@
                     <tr class="hover:bg-slate-50">
                         <td class="px-4 py-3 text-slate-900">{{ $t->TournamentName }}</td>
                         <td class="px-4 py-3 text-slate-600">{{ $t->TournamentDate->format('M j, Y') }}</td>
-                        <td class="px-4 py-3"><x-badge variant="default">{{ $t->status }}</x-badge></td>
+                        <td class="px-4 py-3 text-slate-600">{{ $t->city ?? '–' }}</td>
+                        <td class="px-4 py-3 text-slate-600">{{ $t->state ?? '–' }}</td>
                         <td class="px-4 py-3 text-right">
                             <x-button href="{{ route('tournaments.show', $t->id) }}" variant="secondary">View</x-button>
                         </td>

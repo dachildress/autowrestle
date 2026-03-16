@@ -56,6 +56,8 @@ class ManageTournamentController extends Controller
             'TournamentName' => 'required|string|max:100',
             'TournamentDate' => 'required|date',
             'OpenDate' => 'required|date',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:50',
             'message' => 'nullable|string|max:2000',
             'flyer' => 'nullable|file|mimes:pdf|max:2560',
         ]);
@@ -70,6 +72,8 @@ class ManageTournamentController extends Controller
                 'TournamentName' => $request->input('TournamentName'),
                 'TournamentDate' => $request->input('TournamentDate'),
                 'OpenDate' => $request->input('OpenDate'),
+                'city' => $request->input('city'),
+                'state' => $request->input('state'),
                 'message' => $request->input('message'),
                 'AllowDouble' => $allowDouble,
                 'status' => 0,
@@ -171,6 +175,8 @@ class ManageTournamentController extends Controller
             'TournamentName' => 'required|string|max:100',
             'TournamentDate' => 'required|date',
             'OpenDate' => 'required|date',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:50',
             'message' => 'nullable|string|max:2000',
             'flyer' => 'nullable|file|mimes:pdf|max:2560',
         ]);
@@ -178,6 +184,8 @@ class ManageTournamentController extends Controller
         $tournament->TournamentName = $request->input('TournamentName');
         $tournament->TournamentDate = $request->input('TournamentDate');
         $tournament->OpenDate = $request->input('OpenDate');
+        $tournament->city = $request->input('city');
+        $tournament->state = $request->input('state');
         $tournament->message = $request->input('message');
         $tournament->AllowDouble = $request->boolean('AllowDouble') ? '1' : '0';
         $tournament->ViewWrestlers = $request->boolean('ViewWrestlers') ? 1 : 0;

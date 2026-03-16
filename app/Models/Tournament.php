@@ -16,8 +16,15 @@ class Tournament extends Model
     protected $fillable = [
         'TournamentName',
         'TournamentDate',
+        'end_date',
         'link',
         'message',
+        'contact_name',
+        'contact_email',
+        'location_name',
+        'location_address',
+        'city',
+        'state',
         'AllowDouble',
         'status',
         'pending_approval',
@@ -28,6 +35,7 @@ class Tournament extends Model
 
     protected $casts = [
         'TournamentDate' => 'date',
+        'end_date' => 'date',
         'OpenDate' => 'date',
         'pending_approval' => 'boolean',
     ];
