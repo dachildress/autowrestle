@@ -240,7 +240,177 @@
             @endguest
         @elseif($tab === 'brackets')
             <h2 class="mb-4 text-xl font-semibold text-slate-900">Brackets</h2>
-            <p class="text-slate-600">Bracket view will be available here. (Coming soon.)</p>
+
+            @if(empty($selectedBracketsData))
+                {{-- Prompt to select brackets --}}
+                <div class="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-slate-50/50 py-16 px-6 text-center">
+                    <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    <p class="mt-4 text-slate-600">Select at least one division and weight class to open a bracket.</p>
+                    <button type="button" onclick="document.getElementById('brackets-modal').classList.remove('hidden')" class="mt-6 inline-flex items-center justify-center rounded-md bg-aw-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-aw-accent focus:ring-offset-2">
+                        Select Brackets
+                    </button>
+                </div>
+
+                {{-- Modal: division + bracket checkboxes --}}
+                <div id="brackets-modal" class="fixed inset-0 z-50 hidden" aria-modal="true" aria-labelledby="brackets-modal-title">
+                    <div class="fixed inset-0 bg-slate-600/60" onclick="document.getElementById('brackets-modal').classList.add('hidden')"></div>
+                    <div class="fixed right-0 top-0 bottom-0 w-full max-w-md overflow-hidden bg-white shadow-xl flex flex-col">
+                        <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                            <h3 id="brackets-modal-title" class="text-lg font-semibold text-slate-900">Select brackets</h3>
+                            <button type="button" onclick="document.getElementById('brackets-modal').classList.add('hidden')" class="rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700" aria-label="Close">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                        <form method="get" action="{{ route('tournaments.show', ['id' => $tournament->id, 'tab' => 'brackets']) }}" id="brackets-form" class="flex flex-1 flex-col overflow-hidden">
+                            <input type="hidden" name="tab" value="brackets">
+                            <div class="flex-1 overflow-y-auto px-4 py-3">
+                                @php
+                                    $bracketOptionsByDivision = collect($bracketOptions ?? [])->groupBy('division_name');
+                                @endphp
+                                @forelse($bracketOptionsByDivision as $divisionName => $opts)
+                                    <div class="mb-4">
+                                        <p class="mb-2 font-medium text-slate-700">{{ $divisionName }}</p>
+                                        <ul class="space-y-1.5">
+                                            @foreach($opts as $opt)
+                                                <li class="flex items-center gap-2">
+                                                    <input type="checkbox" name="brackets[]" value="{{ $opt['bracket_id'] }}" id="bracket-{{ $opt['bracket_id'] }}" class="h-4 w-4 rounded border-slate-300 text-aw-accent focus:ring-aw-accent">
+                                                    <label for="bracket-{{ $opt['bracket_id'] }}" class="text-sm text-slate-900">{{ $opt['group_name'] ?? 'Bracket ' . $opt['bracket_id'] }}</label>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                @empty
+                                    <p class="text-slate-600">No completed brackets yet. Brackets will appear here once they are finished.</p>
+                                @endforelse
+                                @if(!empty($bracketOptions))
+                                    <div class="mt-4 border-t border-slate-200 pt-3">
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="checkbox" id="brackets-select-all" class="h-4 w-4 rounded border-slate-300 text-aw-accent focus:ring-aw-accent">
+                                            <span class="text-sm font-medium text-slate-700">Select all brackets</span>
+                                        </label>
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
+                                <button type="button" onclick="document.getElementById('brackets-modal').classList.add('hidden')" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">Cancel</button>
+                                <button type="submit" name="open" value="1" class="rounded-md bg-aw-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90">Open</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                @if(!empty($bracketOptions))
+                <script>
+                    (function() {
+                        var form = document.getElementById('brackets-form');
+                        var selectAll = document.getElementById('brackets-select-all');
+                        if (selectAll && form) {
+                            selectAll.addEventListener('change', function() {
+                                form.querySelectorAll('input[name="brackets[]"]').forEach(function(cb) { cb.checked = selectAll.checked; });
+                            });
+                        }
+                    })();
+                </script>
+                @endif
+            @else
+                {{-- Selected brackets: tabs + bout cards --}}
+                <div class="mb-4 flex flex-wrap items-center gap-2">
+                    @foreach($selectedBracketsData as $index => $bracketData)
+                        <div class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm">
+                            <span class="font-medium text-slate-900">{{ $bracketData->meta['group_name'] ?? 'Bracket' }} – {{ $bracketData->meta['division_name'] ?? '' }}</span>
+                            <a href="{{ route('tournaments.show', ['id' => $tournament->id, 'tab' => 'brackets', 'brackets' => array_values(array_diff($selectedBracketIds, [$bracketData->bracket_id]))]) }}" class="ml-1 text-slate-400 hover:text-slate-600" aria-label="Remove bracket">×</a>
+                        </div>
+                    @endforeach
+                    <button type="button" onclick="document.getElementById('brackets-modal').classList.remove('hidden')" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 hover:bg-slate-50" aria-label="Add bracket">+</button>
+                </div>
+
+                {{-- Re-open modal for adding more (hidden when we have selections) --}}
+                <div id="brackets-modal" class="fixed inset-0 z-50 hidden" aria-modal="true">
+                    <div class="fixed inset-0 bg-slate-600/60" onclick="document.getElementById('brackets-modal').classList.add('hidden')"></div>
+                    <div class="fixed right-0 top-0 bottom-0 w-full max-w-md overflow-hidden bg-white shadow-xl flex flex-col">
+                        <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                            <h3 class="text-lg font-semibold text-slate-900">Add brackets</h3>
+                            <button type="button" onclick="document.getElementById('brackets-modal').classList.add('hidden')" class="rounded p-1 text-slate-500 hover:bg-slate-100">×</button>
+                        </div>
+                        <form method="get" action="{{ route('tournaments.show', ['id' => $tournament->id, 'tab' => 'brackets']) }}" class="flex flex-1 flex-col overflow-hidden">
+                            <input type="hidden" name="tab" value="brackets">
+                            @foreach($selectedBracketIds as $bid)
+                                <input type="hidden" name="brackets[]" value="{{ $bid }}">
+                            @endforeach
+                            <div class="flex-1 overflow-y-auto px-4 py-3">
+                                @php $bracketOptionsByDivision = collect($bracketOptions ?? [])->groupBy('division_name'); @endphp
+                                @foreach($bracketOptionsByDivision as $divisionName => $opts)
+                                    <div class="mb-4">
+                                        <p class="mb-2 font-medium text-slate-700">{{ $divisionName }}</p>
+                                        <ul class="space-y-1.5">
+                                            @foreach($opts as $opt)
+                                                <li class="flex items-center gap-2">
+                                                    @php $already = in_array($opt['bracket_id'], $selectedBracketIds); @endphp
+                                                    <input type="checkbox" name="brackets[]" value="{{ $opt['bracket_id'] }}" id="add-bracket-{{ $opt['bracket_id'] }}" class="h-4 w-4 rounded border-slate-300 text-aw-accent" {{ $already ? 'disabled' : '' }}>
+                                                    <label for="add-bracket-{{ $opt['bracket_id'] }}" class="text-sm {{ $already ? 'text-slate-400' : 'text-slate-900' }}">{{ $opt['group_name'] ?? 'Bracket ' . $opt['bracket_id'] }}{{ $already ? ' (already added)' : '' }}</label>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                @endforeach
+                            </div>
+                            <div class="flex justify-end gap-2 border-t border-slate-200 px-4 py-3">
+                                <button type="button" onclick="document.getElementById('brackets-modal').classList.add('hidden')" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Cancel</button>
+                                <button type="submit" class="rounded-md bg-aw-accent px-4 py-2 text-sm font-semibold text-white hover:opacity-90">Add</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                {{-- Bout cards for each selected bracket --}}
+                @foreach($selectedBracketsData as $bracketData)
+                    <div class="mb-8">
+                        <h3 class="mb-3 text-base font-semibold text-slate-900">{{ $bracketData->meta['group_name'] ?? 'Bracket' }} – {{ $bracketData->meta['division_name'] ?? '' }}</h3>
+                        @if(empty($bracketData->bouts))
+                            <p class="text-slate-600">No bout data for this bracket.</p>
+                        @else
+                            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                @foreach($bracketData->bouts as $bout)
+                                    <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                                        <div class="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                                            <span class="font-mono font-medium text-slate-900">#{{ $bout['bout_id'] }}</span>
+                                            @if($bout['round'] > 0)
+                                                <span class="text-slate-600">Round {{ $bout['round'] }}</span>
+                                            @endif
+                                            @if($bout['is_pin'])
+                                                <x-icons.pin class="h-4 w-4 text-amber-600" />
+                                            @elseif($bout['is_major'])
+                                                <x-icons.major class="h-4 w-4 text-slate-600" />
+                                            @endif
+                                            <span class="font-medium text-slate-700">{{ $bout['result_label'] }}</span>
+                                        </div>
+                                        <div class="space-y-1 text-sm text-slate-700">
+                                            @php
+                                                $winnerId = $bout['winner_id'] ?? null;
+                                                $redWins = $winnerId !== null && $winnerId == ($bout['red_wrestler_id'] ?? null);
+                                                $greenWins = $winnerId !== null && $winnerId == ($bout['green_wrestler_id'] ?? null);
+                                            @endphp
+                                            <p>
+                                                @if($redWins)
+                                                    <span class="font-bold">» {{ $bout['red_name'] }}</span> <span class="text-slate-500">{{ $bout['red_score'] ?? 0 }}</span><br>
+                                                    <span>{{ $bout['green_name'] }}</span> <span class="text-slate-500">{{ $bout['green_score'] ?? 0 }}</span>
+                                                @elseif($greenWins)
+                                                    <span>{{ $bout['red_name'] }}</span> <span class="text-slate-500">{{ $bout['red_score'] ?? 0 }}</span><br>
+                                                    <span class="font-bold">» {{ $bout['green_name'] }}</span> <span class="text-slate-500">{{ $bout['green_score'] ?? 0 }}</span>
+                                                @else
+                                                    <span>{{ $bout['red_name'] }}</span> <span class="text-slate-500">{{ $bout['red_score'] ?? 0 }}</span><br>
+                                                    <span>{{ $bout['green_name'] }}</span> <span class="text-slate-500">{{ $bout['green_score'] ?? 0 }}</span>
+                                                @endif
+                                            </p>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            @endif
 
         @elseif($tab === 'teams')
             <h2 class="mb-4 text-xl font-semibold text-slate-900">Teams</h2>

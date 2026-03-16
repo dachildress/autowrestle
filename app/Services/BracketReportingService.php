@@ -286,4 +286,112 @@ class BracketReportingService
 
         return $result;
     }
+
+    /**
+     * Get completed bouts for a bracket for public bracket display.
+     * Returns array of bout cards: bout_id, round, result_label (PINS, MD, F:00, etc.), time_display, is_pin, is_major, red_name, green_name, red_score, green_score, winner_id.
+     */
+    public function getBoutsForBracket(int $tournamentId, int $bracketId): array
+    {
+        $boutIds = Bout::where('Tournament_Id', $tournamentId)
+            ->where('Bracket_Id', $bracketId)
+            ->distinct()
+            ->pluck('id');
+
+        if ($boutIds->isEmpty()) {
+            return [];
+        }
+
+        $states = BoutScoringState::where('tournament_id', $tournamentId)
+            ->whereIn('bout_id', $boutIds)
+            ->where('status', 'completed')
+            ->get()
+            ->keyBy('bout_id');
+
+        $boutRows = Bout::where('Tournament_Id', $tournamentId)
+            ->whereIn('id', $boutIds)
+            ->orderBy('id')
+            ->orderBy('Wrestler_Id')
+            ->get();
+
+        $wrestlerIds = $boutRows->pluck('Wrestler_Id')->unique()->filter()->values();
+        $wrestlers = TournamentWrestler::where('Tournament_id', $tournamentId)
+            ->whereIn('id', $wrestlerIds)
+            ->get()
+            ->keyBy('id');
+
+        $boutsByBoutId = $boutRows->groupBy('id');
+        $result = [];
+        foreach ($boutIds as $bid) {
+            $rows = $boutsByBoutId->get($bid);
+            if (! $rows || $rows->count() < 2) {
+                continue;
+            }
+            $state = $states->get($bid);
+            if (! $state) {
+                continue;
+            }
+            $redId = $state->red_wrestler_id;
+            $greenId = $state->green_wrestler_id;
+            $red = $wrestlers->get($redId);
+            $green = $wrestlers->get($greenId);
+            $redName = $red ? trim($red->wr_first_name . ' ' . $red->wr_last_name) : '–';
+            $greenName = $green ? trim($green->wr_first_name . ' ' . $green->wr_last_name) : '–';
+            $firstRow = $rows->first();
+            $round = $firstRow->round ?? 0;
+            $wrtime = $firstRow->wrtime ?? null;
+            $pin = (bool) $firstRow->pin;
+            $resultType = $state->result_type ? trim($state->result_type) : null;
+            $isPin = $pin || (strtolower((string) $resultType) === 'pin');
+            $isMajor = strtolower((string) $resultType) === 'major decision' || strtolower((string) $resultType) === 'major';
+            $resultLabel = $this->boutResultLabel($resultType, $pin, $wrtime);
+            $timeDisplay = $wrtime ?: ($isPin ? 'PINS' : 'F:00');
+
+            $result[] = [
+                'bout_id' => $bid,
+                'round' => $round,
+                'result_label' => $resultLabel,
+                'time_display' => $timeDisplay,
+                'is_pin' => $isPin,
+                'is_major' => $isMajor,
+                'red_name' => $redName,
+                'green_name' => $greenName,
+                'red_wrestler_id' => $redId,
+                'green_wrestler_id' => $greenId,
+                'red_score' => (int) $state->red_score,
+                'green_score' => (int) $state->green_score,
+                'winner_id' => $state->winner_id,
+            ];
+        }
+
+        usort($result, function ($a, $b) {
+            if ($a['round'] !== $b['round']) {
+                return $a['round'] <=> $b['round'];
+            }
+            return $a['bout_id'] <=> $b['bout_id'];
+        });
+
+        return $result;
+    }
+
+    private function boutResultLabel(?string $resultType, bool $pin, ?string $wrtime): string
+    {
+        if ($pin || (strtolower((string) $resultType) === 'pin')) {
+            return 'PINS';
+        }
+        $r = strtolower((string) $resultType);
+        if ($r === 'major decision' || $r === 'major') {
+            return 'MD';
+        }
+        if ($r === 'technical fall' || $r === 'tech fall') {
+            return 'TF';
+        }
+        if ($r === 'forfeit' || $r === 'default' || $r === 'disqualification' || $r === 'double forfeit') {
+            return $resultType ?: 'FFT';
+        }
+        if ($wrtime) {
+            return 'F:00';
+        }
+        return 'F:00';
+    }
 }

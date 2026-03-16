@@ -30,10 +30,12 @@ class Tournament extends Model
         'pending_approval',
         'OpenDate',
         'ViewWrestlers',
+        'usa_number_required',
         'Type',
     ];
 
     protected $casts = [
+        'usa_number_required' => 'boolean',
         'TournamentDate' => 'date',
         'end_date' => 'date',
         'OpenDate' => 'date',

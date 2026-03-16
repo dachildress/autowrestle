@@ -17,10 +17,52 @@ class TournamentController extends Controller
         private BracketReportingService $reporting
     ) {}
 
-    public function current(): View
+    public function current(Request $request): View
     {
-        $tournaments = Tournament::upcomingAndOpen()->orderBy('TournamentDate', 'asc')->get();
-        return view('tournaments.list', compact('tournaments'));
+        $hasFilters = $request->filled('name')
+            || $request->filled('date_from')
+            || $request->filled('date_to')
+            || $request->filled('city')
+            || $request->filled('state');
+
+        $query = Tournament::where('pending_approval', false);
+
+        if (! $hasFilters) {
+            $today = now()->startOfDay();
+            $query->whereDate('TournamentDate', '>=', $today)
+                ->where(function ($q) use ($today) {
+                    $q->whereNull('OpenDate')->orWhereDate('OpenDate', '<=', $today);
+                });
+        }
+
+        if ($request->filled('name')) {
+            $query->where('TournamentName', 'like', '%' . $request->input('name') . '%');
+        }
+        if ($request->filled('date_from')) {
+            $query->whereDate('TournamentDate', '>=', $request->input('date_from'));
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('TournamentDate', '<=', $request->input('date_to'));
+        }
+        if ($request->filled('city')) {
+            $query->where('city', 'like', '%' . $request->input('city') . '%');
+        }
+        if ($request->filled('state')) {
+            $query->where('state', 'like', '%' . $request->input('state') . '%');
+        }
+
+        $tournaments = $query->orderBy('TournamentDate', 'asc')->get();
+
+        return view('tournaments.list', [
+            'tournaments' => $tournaments,
+            'filters' => [
+                'name' => $request->input('name'),
+                'date_from' => $request->input('date_from'),
+                'date_to' => $request->input('date_to'),
+                'city' => $request->input('city'),
+                'state' => $request->input('state'),
+            ],
+        ]);
     }
 
     public function show(Request $request, int $id): View
@@ -107,6 +149,31 @@ class TournamentController extends Controller
             }
         }
 
+        $bracketOptions = [];
+        $selectedBracketsData = [];
+        $selectedBracketIds = [];
+        if ($tab === 'brackets') {
+            $bracketOptions = $this->reporting->getCompletedBracketSummaries($id)->values()->all();
+            $raw = $request->query('brackets');
+            if (is_array($raw)) {
+                $selectedBracketIds = array_values(array_map('intval', array_filter($raw)));
+            } elseif (is_string($raw) && $raw !== '') {
+                $selectedBracketIds = array_values(array_unique(array_map('intval', array_filter(explode(',', $raw)))));
+            }
+            foreach ($selectedBracketIds as $bid) {
+                if (! $this->reporting->isBracketComplete($id, $bid)) {
+                    continue;
+                }
+                $meta = $this->reporting->getBracketMeta($id, $bid);
+                $bouts = $this->reporting->getBoutsForBracket($id, $bid);
+                $selectedBracketsData[] = (object) [
+                    'bracket_id' => $bid,
+                    'meta' => $meta,
+                    'bouts' => $bouts,
+                ];
+            }
+        }
+
         return view('tournaments.show', [
             'tournament' => $tournament,
             'tab' => $tab,
@@ -120,6 +187,9 @@ class TournamentController extends Controller
             'resultsDivisionId' => $resultsDivisionId,
             'resultsTeam' => $resultsTeam,
             'teamsForResults' => $teamsForResults,
+            'bracketOptions' => $bracketOptions,
+            'selectedBracketsData' => $selectedBracketsData,
+            'selectedBracketIds' => $selectedBracketIds,
         ]);
     }
 

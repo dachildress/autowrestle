@@ -74,6 +74,10 @@ class RegistrationController extends Controller
             return redirect()->route('tournaments.register', $tid)->with('error', 'Tournament is locked.');
         }
 
+        if ($tournament->usa_number_required && (null === $wrestler->usawnumber || '' === (string) $wrestler->usawnumber || 0 === (int) $wrestler->usawnumber)) {
+            return redirect()->route('tournaments.register', $tid)->with('error', 'This tournament requires a USA Wrestling number. Please add a USA Wrestling number to this wrestler in My Wrestlers, then try again.');
+        }
+
         if ($wrestler->wr_dob) {
             $age = Carbon::parse($wrestler->wr_dob)->age;
             if ((int) $wrestler->wr_age !== $age) {
@@ -98,6 +102,10 @@ class RegistrationController extends Controller
         }
         if ($tournament->isPast() || ! $tournament->isRegistrationOpen()) {
             return redirect()->route('tournaments.list')->with('error', 'Registration is closed or not open for this tournament.');
+        }
+
+        if ($tournament->usa_number_required && (null === $wrestler->usawnumber || '' === (string) $wrestler->usawnumber || 0 === (int) $wrestler->usawnumber)) {
+            return redirect()->route('tournaments.register', $tid)->with('error', 'This tournament requires a USA Wrestling number for each wrestler. Please add it in My Wrestlers and try again.');
         }
 
         $weight = (int) $request->input('wr_weight');

@@ -34,6 +34,16 @@
     a:hover {
         @apply text-aw-accent underline;
     }
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    input[type="date"],
+    input[type="password"],
+    input[type="search"],
+    select,
+    textarea {
+        @apply border border-slate-300;
+    }
 }
 
 /* Legacy component classes – keep for existing Blade views; styled with design system */

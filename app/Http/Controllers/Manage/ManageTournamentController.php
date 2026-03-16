@@ -79,6 +79,7 @@ class ManageTournamentController extends Controller
                 'status' => 0,
                 'pending_approval' => ! $isLevelZero,
                 'ViewWrestlers' => $viewWrestlers,
+                'usa_number_required' => $request->boolean('usa_number_required'),
                 'Type' => 1,
             ]);
             $t->users()->attach($user->id);
@@ -189,6 +190,7 @@ class ManageTournamentController extends Controller
         $tournament->message = $request->input('message');
         $tournament->AllowDouble = $request->boolean('AllowDouble') ? '1' : '0';
         $tournament->ViewWrestlers = $request->boolean('ViewWrestlers') ? 1 : 0;
+        $tournament->usa_number_required = $request->boolean('usa_number_required');
 
         if ($request->hasFile('flyer')) {
             $dir = public_path('flyers');

@@ -15,6 +15,7 @@ class Wrestler extends Model
     protected $fillable = [
         'wr_first_name',
         'wr_last_name',
+        'wr_gender',
         'wr_club',
         'wr_age',
         'wr_grade',

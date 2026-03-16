@@ -38,6 +38,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/wrestlers', [\App\Http\Controllers\WrestlerController::class, 'index'])->name('wrestlers.index');
     Route::get('/wrestlers/create', [\App\Http\Controllers\WrestlerController::class, 'create'])->name('wrestlers.create');
     Route::post('/wrestlers', [\App\Http\Controllers\WrestlerController::class, 'store'])->name('wrestlers.store');
+    Route::get('/wrestlers/clubs/create', [\App\Http\Controllers\WrestlerController::class, 'createClub'])->name('wrestlers.clubs.create');
+    Route::post('/wrestlers/clubs', [\App\Http\Controllers\WrestlerController::class, 'storeClub'])->name('wrestlers.clubs.store');
     Route::get('/wrestlers/{id}/edit', [\App\Http\Controllers\WrestlerController::class, 'edit'])->name('wrestlers.edit')->where('id', '[0-9]+');
     Route::post('/wrestlers/{id}', [\App\Http\Controllers\WrestlerController::class, 'update'])->name('wrestlers.update')->where('id', '[0-9]+');
 

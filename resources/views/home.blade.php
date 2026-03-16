@@ -20,17 +20,6 @@
 
 <div class="grid gap-6 md:grid-cols-3">
     <div class="md:col-span-2 space-y-6">
-        <x-card title="How To">
-            <ul class="list-inside list-disc space-y-2 text-slate-700">
-                <li>Create an AutoWrestle account to manage your wrestlers.</li>
-                <li>Login using your email address and password.</li>
-                <li>Click your name in the upper right to manage your wrestlers.</li>
-                <li>Update your wrestler weight before you register for a tournament.</li>
-                <li>Click on a tournament, then Add Wrestler for each wrestler you want to enter.</li>
-            </ul>
-            <p class="mt-4 text-sm text-slate-500">Like us on Facebook and tag AutoWrestle in your pictures to have them posted on our site!</p>
-        </x-card>
-
         <x-card title="Upcoming Tournaments">
             @forelse($tournaments as $tournament)
                 <article class="border-b border-slate-200 pb-4 last:border-0 last:pb-0">
@@ -105,6 +94,17 @@
                     @endforelse
                 </tbody>
             </table>
+        </x-card>
+
+        <x-card title="How To">
+            <ul class="list-inside list-disc space-y-2 text-slate-700">
+                <li>Create an AutoWrestle account to manage your wrestlers.</li>
+                <li>Login using your email address and password.</li>
+                <li>Click your name in the upper right to manage your wrestlers.</li>
+                <li>Update your wrestler weight before you register for a tournament.</li>
+                <li>Click on a tournament, then Add Wrestler for each wrestler you want to enter.</li>
+            </ul>
+            <p class="mt-4 text-sm text-slate-500">Like us on Facebook and tag AutoWrestle in your pictures to have them posted on our site!</p>
         </x-card>
     </div>
 </div>
