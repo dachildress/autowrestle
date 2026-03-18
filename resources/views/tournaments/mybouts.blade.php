@@ -22,7 +22,7 @@
         <tbody>
             @foreach($data as $row)
                 <tr>
-                    <td>{{ $row->bout_id }}</td>
+                    <td>{{ $row->bout_number ?? $row->bout_id }}</td>
                     <td>{{ $row->opponent_name }}</td>
                     <td>{{ $row->opponent_club }}</td>
                     <td style="text-align: center;">{{ $row->score }}</td>

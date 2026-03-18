@@ -8,18 +8,17 @@ use App\Models\Bracket;
 use App\Models\Tournament;
 use App\Models\User;
 use App\Models\TournamentWrestler;
-use App\Services\TournamentSetupService;
+use App\Services\BoutNumberSchemeService;
+use App\Mail\TournamentPendingApproval;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class ManageTournamentController extends Controller
 {
-    public function __construct(
-        private TournamentSetupService $setupService
-    ) {}
     private function authorizeTournament(Request $request, int $id): Tournament
     {
         $tournament = Tournament::findOrFail($id);
@@ -83,7 +82,6 @@ class ManageTournamentController extends Controller
                 'Type' => 1,
             ]);
             $t->users()->attach($user->id);
-            $this->setupService->createDefaultStructure($t);
             return $t;
         });
 
@@ -97,10 +95,17 @@ class ManageTournamentController extends Controller
             $tournament->update(['link' => $safeName]);
         }
 
+        if ($tournament->pending_approval) {
+            $admins = User::where('accesslevel', '0')->whereNotNull('email')->get();
+            foreach ($admins as $admin) {
+                Mail::to($admin->email)->send(new TournamentPendingApproval($tournament));
+            }
+        }
+
         $message = $isLevelZero
-            ? 'Tournament created and is active. Default divisions and groups have been added.'
+            ? 'Tournament created and is active.'
             : 'Tournament created. It will appear on the site once approved by an administrator. You can manage it from this page.';
-        return redirect()->route('manage.view.summary', $tournament->id)->with('success', $message);
+        return redirect()->route('manage.checklist.index', $tournament->id)->with('success', $message);
     }
 
     public function approve(Request $request, int $id): RedirectResponse
@@ -154,7 +159,12 @@ class ManageTournamentController extends Controller
     {
         $tournament = $this->authorizeTournament($request, $id);
         $tournament->load(['divisions.divGroups', 'tournamentWrestlers']);
-        return view('manage.tournaments.show', compact('tournament'));
+        $schemeService = app(BoutNumberSchemeService::class);
+        $divisionHasScheme = [];
+        foreach ($tournament->divisions as $div) {
+            $divisionHasScheme[$div->id] = $schemeService->divisionHasScheme((int) $tournament->id, (int) $div->id);
+        }
+        return view('manage.tournaments.show', compact('tournament', 'divisionHasScheme'));
     }
 
     /**

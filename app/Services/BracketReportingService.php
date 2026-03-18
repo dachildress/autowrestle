@@ -349,6 +349,7 @@ class BracketReportingService
 
             $result[] = [
                 'bout_id' => $bid,
+                'bout_number' => $firstRow->bout_number,
                 'round' => $round,
                 'result_label' => $resultLabel,
                 'time_display' => $timeDisplay,

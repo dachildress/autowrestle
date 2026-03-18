@@ -20,6 +20,7 @@ class TournamentWrestler extends Model
         'wr_grade',
         'wr_weight',
         'group_id',
+        'division_id',
         'wr_bracket_id',
         'wr_bracket_position',
         'wr_pr',

@@ -136,7 +136,7 @@
         @apply py-2.5 px-4 bg-slate-100 border-b border-slate-200 rounded-t text-slate-900 text-base font-semibold;
     }
     .panel-body {
-        @apply p-4;
+        @apply p-4 overflow-visible;
     }
     .panel-title, h1 {
         @apply m-0 mb-4 text-slate-900 text-xl font-bold;
@@ -277,4 +277,21 @@
     body.app-backend .viewgroups-tabs li.active strong {
         @apply bg-sky-600 border-sky-600;
     }
+}
+
+/* Bout complete popup (no page change after create bouts) */
+.bout-complete-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-slate-600/60;
+}
+.bout-complete-overlay[hidden] {
+    display: none;
+}
+.bout-complete-box {
+    @apply rounded-lg border border-slate-200 bg-white p-6 shadow-lg max-w-md mx-4;
+}
+.bout-complete-box p {
+    @apply mb-4 text-slate-800;
+}
+.bout-complete-box .btn-primary {
+    @apply inline-flex justify-center rounded-md bg-aw-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90;
 }

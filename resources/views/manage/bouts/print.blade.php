@@ -32,7 +32,7 @@
                 <th>Round</th>
                 <td>{{ $b->round }}</td>
                 <th>Match</th>
-                <td>{{ $b->id }}</td>
+                <td>{{ $b->bout_number ?? $b->id }}</td>
                 <th>Mat</th>
                 <td>{{ $b->mat_number }}</td>
             </tr>

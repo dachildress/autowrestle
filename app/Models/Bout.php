@@ -17,6 +17,7 @@ class Bout extends Model
 
     protected $fillable = [
         'id',
+        'bout_number',
         'Wrestler_Id',
         'Bracket_Id',
         'mat_number',

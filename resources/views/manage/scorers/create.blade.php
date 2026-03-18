@@ -1,10 +1,10 @@
 @extends('layouts.autowrestle')
 
-@section('title', 'Add scorer user')
-@section('panel_title', 'Add scorer user')
+@section('title', 'Add mat user')
+@section('panel_title', 'Add mat user')
 
 @section('content')
-<p><a href="{{ route('manage.scorers.index') }}">← Back to Scorer users</a></p>
+<p><a href="{{ route('manage.scorers.index') }}">← Back to Mat Users</a></p>
 
 <form method="post" action="{{ route('manage.scorers.store') }}" class="form-horizontal">
     @csrf

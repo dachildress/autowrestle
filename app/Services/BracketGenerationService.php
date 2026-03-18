@@ -61,6 +61,7 @@ class BracketGenerationService
         while (! $complete) {
             $first = TournamentWrestler::where('Tournament_id', $tid)
                 ->where('group_id', $groupid)
+                ->where('division_id', $div)
                 ->where('bracketed', 0)
                 ->orderByRaw('COALESCE(wr_pr, wr_weight, 0) ASC')
                 ->orderByRaw('COALESCE(wr_years, 0) ASC')
@@ -81,6 +82,7 @@ class BracketGenerationService
 
             $others = TournamentWrestler::where('Tournament_id', $tid)
                 ->where('group_id', $groupid)
+                ->where('division_id', $div)
                 ->where('bracketed', 0)
                 ->where('id', '!=', $first->id)
                 ->whereRaw('COALESCE(wr_pr, wr_weight, 0) >= ?', [$lowEnd])
@@ -98,12 +100,12 @@ class BracketGenerationService
 
             $pos = 0;
             $this->addWrestlerToBracket($first->id, $nextBracket, $pos++, $tid, $div);
-            $this->markBracketed($first->id, $nextBracket, $pos - 1);
+            $this->markBracketed($tid, $first->id, $nextBracket, $pos - 1);
             $rowsCreated++;
 
             foreach ($others as $w) {
                 $this->addWrestlerToBracket($w->id, $nextBracket, $pos++, $tid, $div);
-                $this->markBracketed($w->id, $nextBracket, $pos - 1);
+                $this->markBracketed($tid, $w->id, $nextBracket, $pos - 1);
                 $rowsCreated++;
             }
         }
@@ -141,9 +143,9 @@ class BracketGenerationService
         ]);
     }
 
-    private function markBracketed(int $twId, int $bracketId, int $pos): void
+    private function markBracketed(int $tid, int $twId, int $bracketId, int $pos): void
     {
-        TournamentWrestler::where('id', $twId)->update([
+        TournamentWrestler::where('id', $twId)->where('Tournament_id', $tid)->update([
             'bracketed' => 1,
             'wr_bracket_id' => $bracketId,
             'wr_bracket_position' => $pos,

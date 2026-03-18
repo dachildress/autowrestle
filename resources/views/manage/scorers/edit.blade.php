@@ -1,10 +1,10 @@
 @extends('layouts.autowrestle')
 
-@section('title', 'Edit scorer – ' . $scorer->username)
-@section('panel_title', 'Edit scorer: ' . $scorer->username)
+@section('title', 'Edit mat user – ' . $scorer->username)
+@section('panel_title', 'Edit mat user: ' . $scorer->username)
 
 @section('content')
-<p><a href="{{ route('manage.scorers.index') }}">← Back to Scorer users</a></p>
+<p><a href="{{ route('manage.scorers.index') }}">← Back to Mat Users</a></p>
 
 @if(session('success'))
     <p class="success">{{ session('success') }}</p>

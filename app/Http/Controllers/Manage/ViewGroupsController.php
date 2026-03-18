@@ -73,7 +73,12 @@ class ViewGroupsController extends Controller
             }
         }
 
-        $wrestlers = TournamentWrestler::query()
+        // When same group id exists in multiple divisions, wrestlers with division_id set show only in that division.
+        // Wrestlers with division_id null (legacy/unbackfilled) show in the "canonical" division for this group (smallest Division_id).
+        $canonicalDivisionIdForGroup = DivGroup::where('id', $gid)->where('Tournament_Id', $tid)->min('Division_id');
+        $isCanonicalDivision = $canonicalDivisionIdForGroup !== null && (int) $did === (int) $canonicalDivisionIdForGroup;
+
+        $query = TournamentWrestler::query()
             ->with('wrestler')
             ->join('divgroups', function ($j) use ($tid, $did, $gid) {
                 $j->on('tournamentwrestlers.group_id', '=', 'divgroups.id')
@@ -82,6 +87,18 @@ class ViewGroupsController extends Controller
                     ->where('divgroups.id', '=', $gid);
             })
             ->where('tournamentwrestlers.Tournament_id', $tid)
+            ->where('tournamentwrestlers.group_id', $gid);
+
+        if ($isCanonicalDivision) {
+            $query->where(function ($q) use ($did) {
+                $q->where('tournamentwrestlers.division_id', $did)
+                    ->orWhereNull('tournamentwrestlers.division_id');
+            });
+        } else {
+            $query->where('tournamentwrestlers.division_id', $did);
+        }
+
+        $wrestlers = $query
             ->select('tournamentwrestlers.*')
             ->orderBy('tournamentwrestlers.wr_weight')
             ->orderBy('tournamentwrestlers.wr_last_name')
@@ -170,6 +187,7 @@ class ViewGroupsController extends Controller
                 $allowedGenders = $wrestlerGender === 'girls' ? ['girls', 'coed'] : ['boys', 'coed'];
                 if (in_array((string) $newGroup->gender, $allowedGenders, true)) {
                     $tw->group_id = $newGroup->id;
+                    $tw->division_id = $newGroup->Division_id;
                 }
             }
         }

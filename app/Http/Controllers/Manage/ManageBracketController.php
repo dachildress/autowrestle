@@ -49,7 +49,7 @@ class ManageBracketController extends Controller
         $firstGroup = DivGroup::where('Division_id', $did)->where('Tournament_Id', $tid)->first();
         $gid = $firstGroup ? $firstGroup->id : 0;
         $url = $gid
-            ? route('manage.brackets.show', [$tid, $gid])
+            ? route('manage.brackets.show', [$tid, $did, $gid])
             : route('manage.tournaments.show', $tid);
 
         if ($bracketRowsCreated === 0) {
@@ -62,11 +62,11 @@ class ManageBracketController extends Controller
     /**
      * Show bracketed wrestlers for a group (by bracket id and position).
      */
-    public function show(Request $request, int $tid, int $gid): View
+    public function show(Request $request, int $tid, int $did, int $gid): View
     {
         $tournament = $this->authorizeTournament($request, $tid);
-        $group = DivGroup::where('id', $gid)->where('Tournament_Id', $tid)->firstOrFail();
-        $division = Division::where('id', $group->Division_id)->where('Tournament_Id', $tid)->firstOrFail();
+        $division = Division::where('id', $did)->where('Tournament_Id', $tid)->firstOrFail();
+        $group = DivGroup::where('id', $gid)->where('Tournament_Id', $tid)->where('Division_id', $did)->firstOrFail();
 
         $wrestlers = TournamentWrestler::query()
             ->select('tournamentwrestlers.*', 'brackets.id as bracket_id', 'brackets.wr_pos as wr_pos')
@@ -75,6 +75,7 @@ class ManageBracketController extends Controller
                     ->where('brackets.Tournament_Id', '=', $tid);
             })
             ->where('tournamentwrestlers.group_id', $gid)
+            ->where('tournamentwrestlers.division_id', $group->Division_id)
             ->where('tournamentwrestlers.Tournament_id', $tid)
             ->where('tournamentwrestlers.bracketed', 1)
             ->orderBy('brackets.id')
@@ -125,6 +126,7 @@ class ManageBracketController extends Controller
         TournamentWrestler::where('Tournament_id', $tid)
             ->where('bracketed', 1)
             ->whereIn('group_id', $groupIds)
+            ->where('division_id', $did)
             ->update([
                 'bracketed' => 0,
                 'wr_bracket_id' => null,
@@ -231,7 +233,7 @@ class ManageBracketController extends Controller
                 $g->division_name = ($divisionNames[$g->Division_id] ?? '') . ($divisionNames[$g->Division_id] ? ': ' : '') . ($g->Name ?? 'Group ' . $g->id);
                 return $g;
             });
-        $returnUrl = $request->input('return') ?: route('manage.brackets.show', [$tid, $currentGroup->id]);
+        $returnUrl = $request->input('return') ?: route('manage.brackets.show', [$tid, (int) $currentGroup->Division_id, (int) $currentGroup->id]);
 
         return view('manage.brackets.move-wrestler', [
             'tournament' => $tournament,
@@ -286,6 +288,7 @@ class ManageBracketController extends Controller
         }
 
         $tw->group_id = $targetGroup->id;
+        $tw->division_id = $targetGroup->Division_id;
         if ($wasBracketed) {
             $newBracketId = (int) Bracket::where('Tournament_Id', $tid)->max('id') + 1;
             if ($newBracketId < 1) {
@@ -312,7 +315,7 @@ class ManageBracketController extends Controller
         if ($returnUrl && str_starts_with($returnUrl, url(''))) {
             return redirect($returnUrl)->with('success', 'Wrestler moved to ' . ($targetGroup->Name ?? 'group ' . $targetGroup->id) . ($wasBracketed ? ' and placed in a new bracket.' : '.'));
         }
-        return redirect()->route('manage.brackets.show', [$tid, $targetGroup->id])->with('success', 'Wrestler moved to ' . ($targetGroup->Name ?? 'group') . ($wasBracketed ? ' and placed in a new bracket.' : '.'));
+        return redirect()->route('manage.brackets.show', [$tid, (int) $targetGroup->Division_id, (int) $targetGroup->id])->with('success', 'Wrestler moved to ' . ($targetGroup->Name ?? 'group') . ($wasBracketed ? ' and placed in a new bracket.' : '.'));
     }
 
     /**

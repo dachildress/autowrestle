@@ -8,7 +8,7 @@
     <x-slot:actions>
         <x-button href="{{ route('manage.tournaments.create') }}" variant="primary">Create tournament</x-button>
         @if(auth()->user()->isAdmin())
-            <x-button href="{{ route('manage.scorers.index') }}" variant="ghost">Scorer users</x-button>
+            <x-button href="{{ route('manage.scorers.index') }}" variant="ghost">Mat Users</x-button>
             <x-button href="{{ route('manage.content.index') }}" variant="secondary">Site content</x-button>
         @endif
     </x-slot:actions>

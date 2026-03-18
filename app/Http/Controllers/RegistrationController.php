@@ -146,6 +146,7 @@ class RegistrationController extends Controller
                 'wr_years' => $wrestler->wr_years,
                 'wr_pr' => $i === 1 ? $wrestler->wr_weight + 9 : $wrestler->wr_weight,
                 'group_id' => $group->id,
+                'division_id' => $group->Division_id,
                 'Wrestler_Id' => $wrestler->id,
                 'Tournament_id' => $tid,
             ]);

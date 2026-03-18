@@ -110,12 +110,27 @@ class Tournament extends Model
             ->withPivot('Id');
     }
 
+    public function tournamentMats(): HasMany
+    {
+        return $this->hasMany(TournamentMat::class, 'tournament_id', 'id')->orderBy('mat_number');
+    }
+
+    public function checklistItems(): HasMany
+    {
+        return $this->hasMany(TournamentChecklist::class, 'tournament_id', 'id');
+    }
+
     /**
-     * All mat numbers configured for this tournament (from division StartingMat + TotalMats).
-     * Sorted ascending. Admin can assign bouts to any of these mats, including across divisions.
+     * All mat numbers configured for this tournament.
+     * Uses operator-defined tournament_mats when present; otherwise from division StartingMat + TotalMats.
+     * Sorted ascending.
      */
     public function getConfiguredMatNumbers(): array
     {
+        $defined = $this->tournamentMats()->pluck('mat_number')->all();
+        if (! empty($defined)) {
+            return array_values($defined);
+        }
         $this->load('divisions');
         $mats = [];
         foreach ($this->divisions as $d) {

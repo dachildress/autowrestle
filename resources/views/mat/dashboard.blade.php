@@ -46,20 +46,20 @@
                         <th>Bout</th>
                         <th>Division / weight</th>
                         <th>Round</th>
-                        <th>Wrestlers</th>
+                        <th>Red</th>
+                        <th>Green</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($bouts as $b)
+                        @php $displayNumber = $b->bout_number ?? $b->id; @endphp
                         <tr>
-                            <td><a href="{{ route('mat.bout.show', ['boutId' => $b->id]) }}">Bout {{ $b->id }}</a></td>
+                            <td><a href="{{ route('mat.bout.show', ['boutId' => $b->id]) }}">{{ $displayNumber }}</a></td>
                             <td>{{ $b->division_name }} {{ $b->weight }}</td>
                             <td>{{ $b->round }}</td>
-                            <td>
-                                {{ $b->wr1->wr_first_name }} {{ $b->wr1->wr_last_name }}@if($b->wr1->wr_club) ({{ $b->wr1->wr_club }})@endif<br>
-                                {{ $b->wr2->wr_first_name }} {{ $b->wr2->wr_last_name }}@if($b->wr2->wr_club) ({{ $b->wr2->wr_club }})@endif
-                            </td>
+                            <td>{{ $b->wr1->wr_first_name }} {{ $b->wr1->wr_last_name }}@if($b->wr1->wr_club) ({{ $b->wr1->wr_club }})@endif</td>
+                            <td>{{ $b->wr2->wr_first_name }} {{ $b->wr2->wr_last_name }}@if($b->wr2->wr_club) ({{ $b->wr2->wr_club }})@endif</td>
                             <td>{{ $b->completed ? 'Completed' : '—' }}</td>
                         </tr>
                     @endforeach

@@ -22,7 +22,17 @@
             @endif
             </a>
             <a href="{{ route('home') }}">Home</a>
-            @if(isset($manageNav) && $manageNav && isset($tournament) && auth()->check() && (auth()->user()->isAdmin() || $tournament->users()->where('User_id', auth()->id())->exists()))
+            @php
+                $showManageNav = isset($tournament) && $tournament && auth()->check() && (auth()->user()->isAdmin() || $tournament->users()->where('User_id', auth()->id())->exists());
+                if ($showManageNav && !isset($divisionHasScheme)) {
+                    $schemeService = app(\App\Services\BoutNumberSchemeService::class);
+                    $divisionHasScheme = [];
+                    foreach ($tournament->divisions as $div) {
+                        $divisionHasScheme[$div->id] = $schemeService->divisionHasScheme((int) $tournament->id, (int) $div->id);
+                    }
+                }
+            @endphp
+            @if($showManageNav)
                 {{-- Tournament manage nav: only for tournament admins (admin or user with tournament access) --}}
                 <span class="nav-dropdown">
                     <span class="nav-dropdown-toggle">Tournament</span>
@@ -45,9 +55,16 @@
                                 @endforeach
                             </ul>
                         </li>
-                        <li><a href="{{ route('manage.tournaments.edit', $tournament->id) }}">Edit Info</a></li>
-                        <li><a href="{{ route('manage.divisions.index', $tournament->id) }}">Edit Divisions</a></li>
-                        <li><a href="{{ route('manage.tournaments.users', $tournament->id) }}">Tournament access</a></li>
+                        <li><a href="{{ route('manage.tournaments.edit', $tournament->id) }}">Tournament Info</a></li>
+                        <li><a href="{{ route('manage.divisions.index', $tournament->id) }}">Divisions</a></li>
+                        <li><a href="{{ route('manage.mat-setup.index', $tournament->id) }}">Mats</a></li>
+                        <li><a href="{{ url('tournaments/manage/' . $tournament->id . '/number-schemes') }}">Bout Numbering</a></li>
+                        <li><a href="{{ route('manage.tournaments.users', $tournament->id) }}">Tournament Users</a></li>
+                        @if(auth()->user()->isAdmin())
+                        <li><a href="{{ route('manage.scorers.index') }}">Mat Users</a></li>
+                        @endif
+                        <li><a href="{{ route('manage.import-settings.index', $tournament->id) }}">Import Settings</a></li>
+                        <li><a href="{{ route('manage.checklist.index', $tournament->id) }}">Checklist</a></li>
                     </ul>
                 </span>
                 <span class="nav-dropdown">
@@ -83,7 +100,7 @@
                                     @foreach($d->divGroups as $g)
                                         <li>
                                             @if($g->bracketed)
-                                                <a href="{{ route('manage.brackets.show', [$tournament->id, $g->id]) }}">{{ $g->display_name }}</a>
+                                                <a href="{{ route('manage.brackets.show', [$tournament->id, $d->id, $g->id]) }}">{{ $g->display_name }}</a>
                                             @else
                                                 <a href="#" class="nav-link-disabled" onclick="return false;">{{ $g->display_name }} – Not bracketed</a>
                                             @endif
@@ -98,7 +115,7 @@
                                 @foreach($tournament->divisions as $d)
                                     <li>
                                         @if($d->bouted)
-                                            <a href="{{ route('manage.brackets.show', [$tournament->id, $d->divGroups->first()?->id]) }}" target="_blank">{{ $d->DivisionName }}</a>
+                                            <a href="{{ route('manage.brackets.show', [$tournament->id, $d->id, $d->divGroups->first()?->id]) }}" target="_blank">{{ $d->DivisionName }}</a>
                                         @else
                                             <a href="#" class="nav-link-disabled" onclick="return false;">{{ $d->DivisionName }} – Not bouted</a>
                                         @endif
@@ -134,8 +151,10 @@
                                             <a href="#" class="nav-link-disabled" onclick="return false;">{{ $d->DivisionName }} – Not bracketed</a>
                                         @elseif($d->bouted)
                                             <a href="#" class="nav-link-disabled" onclick="return false;">{{ $d->DivisionName }} – Already bouted</a>
+                                        @elseif(isset($divisionHasScheme) && !($divisionHasScheme[$d->id] ?? false))
+                                            <a href="#" class="nav-link-disabled" onclick="return false;">{{ $d->DivisionName }} – No Scheme</a>
                                         @else
-                                            <a href="{{ route('manage.bouts.create', [$tournament->id, $d->id]) }}" onclick="return confirm('Create bouts for {{ $d->DivisionName }}?');">{{ $d->DivisionName }}</a>
+                                            <a href="{{ route('manage.bouts.create', [$tournament->id, $d->id]) }}" class="js-create-bouts" data-confirm="Create bouts for {{ $d->DivisionName }}?" data-division-name="{{ $d->DivisionName }}">{{ $d->DivisionName }}</a>
                                         @endif
                                     </li>
                                 @endforeach
@@ -167,7 +186,7 @@
                             <ul class="nav-dropdown-menu">
                                 @foreach($tournament->divisions as $d)
                                     @if($d->bouted)
-                                        <li><a href="{{ route('manage.brackets.show', [$tournament->id, $d->divGroups->first()?->id]) }}" target="_blank">{{ $d->DivisionName }}</a></li>
+                                        <li><a href="{{ route('manage.brackets.show', [$tournament->id, $d->id, $d->divGroups->first()?->id]) }}" target="_blank">{{ $d->DivisionName }}</a></li>
                                     @endif
                                 @endforeach
                             </ul>
@@ -234,7 +253,7 @@
                                 <li><a href="{{ route('manage.tournaments.index') }}">Manage a Tournament</a></li>
                             @endif
                             @if(auth()->user()->isAdmin())
-                            <li><a href="{{ route('manage.scorers.index') }}">Scorer users</a></li>
+                            <li><a href="{{ route('manage.scorers.index') }}">Mat Users</a></li>
                             <li><a href="{{ route('manage.content.index') }}">Site content</a></li>
                             @endif
                             @if(auth()->user()->isAdmin() || auth()->user()->managedTournaments()->exists())
@@ -271,5 +290,80 @@
             {{ content('footer.text') }}
         </div>
     </footer>
+
+    {{-- Popup when bouting completes (no page change) --}}
+    <div id="bout-complete-modal" class="bout-complete-overlay" role="dialog" aria-modal="true" aria-labelledby="bout-complete-message" hidden>
+        <div class="bout-complete-box">
+            <p id="bout-complete-message"></p>
+            <button type="button" id="bout-complete-ok" class="btn-primary">OK</button>
+        </div>
+    </div>
+    <script>
+(function () {
+    var modal = document.getElementById('bout-complete-modal');
+    var messageEl = document.getElementById('bout-complete-message');
+    var okBtn = document.getElementById('bout-complete-ok');
+    if (!modal || !messageEl || !okBtn) return;
+
+    var lastBoutModalWasSuccess = false;
+
+    function showBoutModal(text, isSuccess) {
+        messageEl.textContent = text;
+        lastBoutModalWasSuccess = isSuccess === true;
+        modal.removeAttribute('hidden');
+    }
+    function closeBoutModal() {
+        modal.setAttribute('hidden', '');
+        if (lastBoutModalWasSuccess) {
+            window.location.reload();
+        }
+    }
+
+    okBtn.addEventListener('click', closeBoutModal);
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeBoutModal();
+    });
+
+    document.addEventListener('click', function (e) {
+        var link = e.target.closest('a.js-create-bouts');
+        if (!link) return;
+        e.preventDefault();
+        if (!confirm(link.getAttribute('data-confirm') || 'Create bouts for this division?')) return;
+        var url = link.getAttribute('href');
+        var divisionName = link.getAttribute('data-division-name') || 'this division';
+        function showSuccess(name) {
+            showBoutModal('Bouting has been completed for "' + name + '".', true);
+        }
+        fetch(url, { redirect: 'manual', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (r.type === 'opaqueredirect' || r.status === 302) {
+                    return { success: true, division_name: divisionName };
+                }
+                return r.text().then(function (text) {
+                    try {
+                        var d = JSON.parse(text);
+                        return { ok: r.ok, data: d };
+                    } catch (err) {
+                        return { ok: r.ok, data: r.ok ? { success: true, division_name: divisionName } : { success: false, message: 'Request completed but response was invalid.' } };
+                    }
+                });
+            })
+            .then(function (_) {
+                if (_.success && _.division_name) {
+                    showSuccess(_.division_name);
+                    return;
+                }
+                if (_.ok && _.data && _.data.success) {
+                    showSuccess(_.data.division_name || divisionName);
+                } else {
+                    showBoutModal(_.data && _.data.message ? _.data.message : 'Something went wrong.', false);
+                }
+            })
+            .catch(function () {
+                showBoutModal('Request failed. Please try again.', false);
+            });
+    });
+})();
+    </script>
 </body>
 </html>

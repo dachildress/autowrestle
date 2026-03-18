@@ -374,7 +374,7 @@
                                 @foreach($bracketData->bouts as $bout)
                                     <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                                         <div class="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                                            <span class="font-mono font-medium text-slate-900">#{{ $bout['bout_id'] }}</span>
+                                            <span class="font-mono font-medium text-slate-900">#{{ $bout['bout_number'] ?? $bout['bout_id'] }}</span>
                                             @if($bout['round'] > 0)
                                                 <span class="text-slate-600">Round {{ $bout['round'] }}</span>
                                             @endif

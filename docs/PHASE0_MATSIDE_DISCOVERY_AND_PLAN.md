@@ -258,12 +258,12 @@ Tournament context for scorer (e.g. `user.Tournament_id`) or chosen once (e.g. �
 - **View:** Dense table: bout #, division/weight, round, red wrestler, green wrestler, clubs, status. Link “Score” → mat-side scoring screen (Phase 4). Filters only if schema supports (e.g. round, completed).
 - **Deliverables:** MatDashboardController (or ScorerController), Blade view, routes, middleware “scorer” (and optionally “scorer_mat_assigned”).
 
-### Phase 3 – Scoring Data Layer
+### Phase 3 – Scoring Data Layer ✅ Complete
 - **Inspect:** Confirm no existing event/history tables (none found).
 - **Migrations:** (1) `bout_scoring_state`: bout_id (or tournament_id + bout_id), red_wrestler_id, green_wrestler_id, red_score, green_score, period, clock_seconds, blood_red, blood_green, injury_red, injury_green, etc., status (pending/live/paused/completed), winner_id, result_type. (2) `bout_scoring_events`: bout_id, side (red/green/neutral), event_type (takedown, escape, etc.), points, period, match_time_snapshot, note, created_by (user_id).
 - **Models:** BoutScoringState (belongsTo Bout, TournamentWrestler x2), BoutScoringEvent (belongsTo Bout, User).
 - **Service:** e.g. `MatScoringService`: startBout(), recordEvent(), updateScore(), setPeriod(), setClock(), completeBout(). All writes to state + event table.
-- **Deliverables:** Migrations, models, service class. No UI yet.
+- **Deliverables:** Migrations, models, service class. No UI yet. See `docs/PHASE3_SCORING_DATA_LAYER_SUMMARY.md`.
 
 ### Phase 4 – Mat-Side Scoring Screen
 - **Route:** e.g. `GET /mat/bout/{boutId}` (scorer only; authorize bout on scorer’s mat).

@@ -14,7 +14,7 @@
 @if($tournament)
     <p><a href="{{ route('manage.view.summary', $tournament->id) }}">← Back to tournament</a></p>
 @else
-    <p class="mb-4 text-slate-600">After creation, default divisions and groups (with period times) will be added. You can edit them from the tournament summary.</p>
+    <p class="mb-4 text-slate-600">After creation, use the checklist to set up divisions, mats, and other options—or import settings from a previous tournament.</p>
     @if(!auth()->user()->isAdmin())
         <p class="mb-4 rounded bg-amber-50 p-3 text-sm text-amber-800">Your tournament will need to be approved by an administrator before it appears on the public site. You can still manage it here.</p>
     @endif

@@ -64,7 +64,7 @@
                         @else
                             <tr class="{{ $r->row_type }}">
                                 <td>{{ $mat }}</td>
-                                <td>{{ $r->bout->id }}</td>
+                                <td>{{ $r->bout->bout_number ?? $r->bout->id }}</td>
                                 <td>{{ $r->bout->wr1->wr_first_name }} {{ $r->bout->wr1->wr_last_name }}</td>
                                 <td>{{ $r->bout->wr1->wr_club }}</td>
                                 <td>{{ $r->bout->wr2->wr_first_name }} {{ $r->bout->wr2->wr_last_name }}</td>

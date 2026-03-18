@@ -101,6 +101,7 @@ class ManageMatController extends Controller
                     ->first();
                 $bouts[] = (object) [
                     'id' => $row->id,
+                    'bout_number' => $row->bout_number,
                     'round' => $wrestlers[0]->round,
                     'division_name' => $wrestlers[0]->DivisionName ?? '–',
                     'wr1' => $wrestlers[0],

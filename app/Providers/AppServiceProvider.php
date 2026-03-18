@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Tournament;
+use App\Services\BoutNumberSchemeService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +52,12 @@ class AppServiceProvider extends ServiceProvider
             $user = request()->user();
             $canManageTournament = $user->isAdmin() || $tournament->users()->where('User_id', $user->id)->exists();
             if ($canManageTournament) {
-                $view->with(compact('tournament'));
+                $schemeService = app(BoutNumberSchemeService::class);
+                $divisionHasScheme = [];
+                foreach ($tournament->divisions as $div) {
+                    $divisionHasScheme[$div->id] = $schemeService->divisionHasScheme((int) $tournament->id, (int) $div->id);
+                }
+                $view->with(compact('tournament', 'divisionHasScheme'));
                 $view->with('manageNav', true);
             }
         });

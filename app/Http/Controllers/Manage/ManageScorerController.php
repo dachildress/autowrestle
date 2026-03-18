@@ -62,7 +62,7 @@ class ManageScorerController extends Controller
             'active' => $valid['active'] ?? '1',
             'mat_number' => !empty($valid['mat_number']) ? (int) $valid['mat_number'] : null,
         ]);
-        return redirect()->route('manage.scorers.index')->with('success', 'Scorer user created.');
+        return redirect()->route('manage.scorers.index')->with('success', 'Mat user created.');
     }
 
     /**
@@ -108,6 +108,6 @@ class ManageScorerController extends Controller
         $this->authorizeAdmin($request);
         $scorer = User::where('accesslevel', self::SCORER_ACCESSLEVEL)->findOrFail($id);
         $scorer->delete();
-        return redirect()->route('manage.scorers.index')->with('success', 'Scorer user removed.');
+        return redirect()->route('manage.scorers.index')->with('success', 'Mat user removed.');
     }
 }

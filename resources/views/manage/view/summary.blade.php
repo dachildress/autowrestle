@@ -13,6 +13,10 @@
 </style>
 <div style="text-align: center; margin-bottom: 1.5rem;">
     <h2 style="margin: 0;">{{ $tournament->TournamentName }} {{ $tournament->TournamentDate->format('m-d-Y') }}</h2>
+    <p style="margin: 0.5rem 0 0;">
+        <a href="{{ url('tournaments/manage/' . $tournament->id . '/number-schemes') }}" class="inline-flex items-center rounded-md bg-aw-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90">Number Schemes</a>
+        <a href="{{ route('manage.tournaments.show', $tournament->id) }}" class="inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 ml-2">Match Board</a>
+    </p>
 </div>
 
 <div class="view-summary-boxes">

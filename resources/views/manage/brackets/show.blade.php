@@ -25,7 +25,7 @@
             @if($g->id == $group->id)
                 <strong>{{ $g->display_name }}</strong>
             @else
-                <a href="{{ route('manage.brackets.show', [$tournament->id, $g->id]) }}">{{ $g->display_name }}</a>
+                <a href="{{ route('manage.brackets.show', [$tournament->id, $division->id, $g->id]) }}">{{ $g->display_name }}</a>
             @endif
         </li>
     @endforeach
@@ -89,8 +89,8 @@
                 <td style="text-align: center;">{{ $w->wr_pos }}</td>
                 @if(!$bouted)
                     <td class="bracket-options">
-                        <a href="{{ route('manage.brackets.moveWrestlerForm', [$tournament->id, $w->id]) }}?return={{ urlencode(route('manage.brackets.show', [$tournament->id, $group->id])) }}" title="Move wrestler to another group" aria-label="Move to group">→</a>
-                        &nbsp;<a href="{{ route('manage.viewgroups.editWrestler', [$tournament->id, $w->id]) }}?return={{ urlencode(route('manage.brackets.show', [$tournament->id, $group->id])) }}" title="Edit wrestler" aria-label="Edit">✎</a>
+                        <a href="{{ route('manage.brackets.moveWrestlerForm', [$tournament->id, $w->id]) }}?return={{ urlencode(route('manage.brackets.show', [$tournament->id, $division->id, $group->id])) }}" title="Move wrestler to another group" aria-label="Move to group">→</a>
+                        &nbsp;<a href="{{ route('manage.viewgroups.editWrestler', [$tournament->id, $w->id]) }}?return={{ urlencode(route('manage.brackets.show', [$tournament->id, $division->id, $group->id])) }}" title="Edit wrestler" aria-label="Edit">✎</a>
                         &nbsp;<a href="{{ route('manage.brackets.deleteWrestler', [$tournament->id, $w->id]) }}" onclick="return confirm('Remove this wrestler from brackets and tournament?');" title="Delete from tournament" aria-label="Delete">×</a>
                     </td>
                 @endif

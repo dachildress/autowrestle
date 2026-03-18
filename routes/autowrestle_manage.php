@@ -60,7 +60,7 @@ Route::middleware(['auth'])->prefix('tournaments/manage')->name('manage.')->grou
         Route::get('divisions/{did}/groups/{gid}/delete', [\App\Http\Controllers\Manage\ManageGroupController::class, 'destroy'])->name('groups.destroy')->where(['did' => '[0-9]+', 'gid' => '[0-9]+']);
 
         Route::get('bracket/{did}', [\App\Http\Controllers\Manage\ManageBracketController::class, 'create'])->name('brackets.create')->where('did', '[0-9]+');
-        Route::get('bracket/show/{gid}', [\App\Http\Controllers\Manage\ManageBracketController::class, 'show'])->name('brackets.show')->where('gid', '[0-9]+');
+        Route::get('bracket/show/{did}/{gid}', [\App\Http\Controllers\Manage\ManageBracketController::class, 'show'])->name('brackets.show')->where(['did' => '[0-9]+', 'gid' => '[0-9]+']);
         Route::get('unbracket/{did}', [\App\Http\Controllers\Manage\ManageBracketController::class, 'unbracket'])->name('brackets.unbracket')->where('did', '[0-9]+');
         Route::get('deletewrestler/{wid}', [\App\Http\Controllers\Manage\ManageBracketController::class, 'deleteWrestler'])->name('brackets.deleteWrestler')->where('wid', '[0-9]+');
         Route::get('movewrestler/{wid}', [\App\Http\Controllers\Manage\ManageBracketController::class, 'moveWrestlerForm'])->name('brackets.moveWrestlerForm')->where('wid', '[0-9]+');
@@ -75,6 +75,20 @@ Route::middleware(['auth'])->prefix('tournaments/manage')->name('manage.')->grou
         Route::get('mats', [\App\Http\Controllers\Manage\ManageMatController::class, 'index'])->name('mats.index');
         Route::get('mats/from/{mat}', [\App\Http\Controllers\Manage\ManageMatController::class, 'fromMat'])->name('mats.fromMat')->where('mat', '[0-9]+');
         Route::post('mats/move', [\App\Http\Controllers\Manage\ManageMatController::class, 'move'])->name('mats.move');
+
+        Route::get('mat-setup', [\App\Http\Controllers\Manage\TournamentMatController::class, 'index'])->name('mat-setup.index');
+        Route::get('mat-setup/create', [\App\Http\Controllers\Manage\TournamentMatController::class, 'create'])->name('mat-setup.create');
+        Route::post('mat-setup', [\App\Http\Controllers\Manage\TournamentMatController::class, 'store'])->name('mat-setup.store');
+        Route::get('mat-setup/{mid}/edit', [\App\Http\Controllers\Manage\TournamentMatController::class, 'edit'])->name('mat-setup.edit')->where('mid', '[0-9]+');
+        Route::post('mat-setup/{mid}', [\App\Http\Controllers\Manage\TournamentMatController::class, 'update'])->name('mat-setup.update')->where('mid', '[0-9]+');
+        Route::get('mat-setup/{mid}/delete', [\App\Http\Controllers\Manage\TournamentMatController::class, 'destroy'])->name('mat-setup.destroy')->where('mid', '[0-9]+');
+
+        Route::get('number-schemes', [\App\Http\Controllers\Manage\BoutNumberSchemeController::class, 'index'])->name('number-schemes.index');
+        Route::get('number-schemes/create', [\App\Http\Controllers\Manage\BoutNumberSchemeController::class, 'create'])->name('number-schemes.create');
+        Route::post('number-schemes', [\App\Http\Controllers\Manage\BoutNumberSchemeController::class, 'store'])->name('number-schemes.store');
+        Route::get('number-schemes/{sid}/edit', [\App\Http\Controllers\Manage\BoutNumberSchemeController::class, 'edit'])->name('number-schemes.edit')->where('sid', '[0-9]+');
+        Route::post('number-schemes/{sid}', [\App\Http\Controllers\Manage\BoutNumberSchemeController::class, 'update'])->name('number-schemes.update')->where('sid', '[0-9]+');
+        Route::get('number-schemes/{sid}/delete', [\App\Http\Controllers\Manage\BoutNumberSchemeController::class, 'destroy'])->name('number-schemes.destroy')->where('sid', '[0-9]+');
 
         Route::get('scansheet/print', [\App\Http\Controllers\Manage\ManageTournamentController::class, 'printScanSheet'])->name('scansheet.print');
 
@@ -94,6 +108,13 @@ Route::middleware(['auth'])->prefix('tournaments/manage')->name('manage.')->grou
         Route::get('viewgroups/wrestler/{wid}/edit', [\App\Http\Controllers\Manage\ViewGroupsController::class, 'editWrestler'])->name('viewgroups.editWrestler')->where('wid', '[0-9]+');
         Route::put('viewgroups/wrestler/{wid}', [\App\Http\Controllers\Manage\ViewGroupsController::class, 'updateWrestler'])->name('viewgroups.updateWrestler')->where('wid', '[0-9]+');
         Route::get('viewgroups/{did}/{gid}', [\App\Http\Controllers\Manage\ViewGroupsController::class, 'show'])->name('viewgroups.show')->where(['did' => '[0-9]+', 'gid' => '[0-9]+']);
+
+        Route::get('import-settings', [\App\Http\Controllers\Manage\ImportSettingsController::class, 'index'])->name('import-settings.index');
+        Route::get('import-settings/from/{sourceTid}', [\App\Http\Controllers\Manage\ImportSettingsController::class, 'from'])->name('import-settings.from')->where('sourceTid', '[0-9]+');
+        Route::post('import-settings', [\App\Http\Controllers\Manage\ImportSettingsController::class, 'store'])->name('import-settings.store');
+
+        Route::get('checklist', [\App\Http\Controllers\Manage\ChecklistController::class, 'index'])->name('checklist.index');
+        Route::post('checklist/toggle', [\App\Http\Controllers\Manage\ChecklistController::class, 'toggle'])->name('checklist.toggle');
 
         Route::get('checkin', [\App\Http\Controllers\Manage\ManageCheckinController::class, 'index'])->name('checkin.index');
         Route::get('checkin/clear-unchecked', [\App\Http\Controllers\Manage\ManageCheckinController::class, 'clearUnchecked'])->name('checkin.clearUnchecked');

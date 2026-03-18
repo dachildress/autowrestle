@@ -47,7 +47,7 @@
                 @foreach($bouts as $b)
                     <tr>
                         <td><input type="checkbox" name="bout_ids[]" value="{{ $b->id }}"></td>
-                        <td>{{ $b->id }}</td>
+                        <td>{{ $b->bout_number ?? $b->id }}</td>
                         <td>{{ $b->round }}</td>
                         <td>{{ $b->division_name }}</td>
                         <td>{{ $b->wr1->wr_first_name }} {{ $b->wr1->wr_last_name }} ({{ $b->wr1->wr_club }})</td>

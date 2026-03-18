@@ -241,6 +241,7 @@ class TournamentController extends Controller
                 : null;
             $data[] = (object) [
                 'bout_id' => $row->id,
+                'bout_number' => $row->bout_number,
                 'round' => $row->round,
                 'opponent_name' => $opponent ? trim($opponent->wr_first_name . ' ' . $opponent->wr_last_name) : '–',
                 'opponent_club' => $opponent ? $opponent->wr_club : '–',

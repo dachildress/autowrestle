@@ -9,7 +9,10 @@ use App\Models\Division;
 use App\Models\DivGroup;
 use App\Models\Tournament;
 use App\Models\TournamentWrestler;
+use App\Models\BoutNumberScheme;
 use App\Services\BoutGenerationService;
+use App\Services\BoutNumberSchemeService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,16 +34,46 @@ class ManageBoutController extends Controller
     }
 
     /**
-     * Create bouts for a division and redirect back.
+     * Create bouts for a division using a number scheme. If no scheme applies, redirect with error.
+     * Optional query: scheme_id to use a specific scheme; otherwise the first applicable scheme is used.
+     * When requested as AJAX (Accept: application/json), returns JSON and does not redirect.
      */
-    public function create(Request $request, int $tid, int $did): RedirectResponse
+    public function create(Request $request, int $tid, int $did): RedirectResponse|JsonResponse
     {
         $tournament = $this->authorizeTournament($request, $tid);
         $division = Division::where('id', $did)->where('Tournament_Id', $tid)->firstOrFail();
-        $service = app(BoutGenerationService::class);
-        $service->createBoutsForDivision($tid, $did);
+        $schemeService = app(BoutNumberSchemeService::class);
+        $wantsJson = $request->wantsJson() || $request->ajax();
+
+        if (! $schemeService->divisionHasScheme($tid, $did)) {
+            $message = 'No number scheme applies to ' . $division->DivisionName . '. Add a scheme under Number Schemes first.';
+            if ($wantsJson) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+            return redirect()->route('manage.tournaments.show', $tid)->with('error', $message);
+        }
+
+        $schemeId = $request->query('scheme_id');
+        if ($schemeId !== null) {
+            $scheme = BoutNumberScheme::where('id', (int) $schemeId)->where('tournament_id', $tid)->firstOrFail();
+            if (! $schemeService->schemeAppliesToDivision($scheme, $tid, $did)) {
+                $message = 'The selected scheme does not apply to ' . $division->DivisionName . '.';
+                if ($wantsJson) {
+                    return response()->json(['success' => false, 'message' => $message], 422);
+                }
+                return redirect()->route('manage.tournaments.show', $tid)->with('error', $message);
+            }
+        } else {
+            $scheme = BoutNumberScheme::where('tournament_id', $tid)->get()->first(fn ($s) => $schemeService->schemeAppliesToDivision($s, $tid, $did));
+        }
+
+        $schemeService->runSchemeForDivision($tid, $did, $scheme->id);
+
+        if ($wantsJson) {
+            return response()->json(['success' => true, 'division_name' => $division->DivisionName]);
+        }
         return redirect()->route('manage.tournaments.show', $tid)
-            ->with('success', 'Bouts created for ' . $division->DivisionName . '.');
+            ->with('success', 'Bouts created for ' . $division->DivisionName . ' using scheme "' . $scheme->scheme_name . '".');
     }
 
     /**
@@ -108,6 +141,7 @@ class ManageBoutController extends Controller
 
                 $bouts[] = (object) [
                     'id' => $row->id,
+                    'bout_number' => $row->bout_number,
                     'round' => $wrestlers[0]->round,
                     'mat_number' => $row->mat_number,
                     'wr1' => $wrestlers[0],
