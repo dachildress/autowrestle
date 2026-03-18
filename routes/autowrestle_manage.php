@@ -113,6 +113,11 @@ Route::middleware(['auth'])->prefix('tournaments/manage')->name('manage.')->grou
         Route::get('import-settings/from/{sourceTid}', [\App\Http\Controllers\Manage\ImportSettingsController::class, 'from'])->name('import-settings.from')->where('sourceTid', '[0-9]+');
         Route::post('import-settings', [\App\Http\Controllers\Manage\ImportSettingsController::class, 'store'])->name('import-settings.store');
 
+        Route::get('challenge-requests', [\App\Http\Controllers\Manage\ManageChallengeRequestController::class, 'index'])->name('challenge-requests.index');
+        Route::get('challenge-requests/{id}', [\App\Http\Controllers\Manage\ManageChallengeRequestController::class, 'show'])->name('challenge-requests.show')->where('id', '[0-9]+');
+        Route::post('challenge-requests/{id}/approve', [\App\Http\Controllers\Manage\ManageChallengeRequestController::class, 'approve'])->name('challenge-requests.approve')->where('id', '[0-9]+');
+        Route::post('challenge-requests/{id}/decline', [\App\Http\Controllers\Manage\ManageChallengeRequestController::class, 'decline'])->name('challenge-requests.decline')->where('id', '[0-9]+');
+
         Route::get('checklist', [\App\Http\Controllers\Manage\ChecklistController::class, 'index'])->name('checklist.index');
         Route::post('checklist/toggle', [\App\Http\Controllers\Manage\ChecklistController::class, 'toggle'])->name('checklist.toggle');
 

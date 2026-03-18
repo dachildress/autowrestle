@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\DivGroup;
 use App\Models\Bout;
+use App\Models\BoutScoringEvent;
+use App\Models\BoutScoringState;
+use App\Models\Division;
+use App\Models\DivGroup;
 use App\Models\Tournament;
 use App\Models\TournamentWrestler;
 use App\Models\Wrestler;
@@ -150,10 +153,19 @@ class TournamentController extends Controller
         }
 
         $bracketOptions = [];
+        $bracketOptionsByDivision = [];
         $selectedBracketsData = [];
         $selectedBracketIds = [];
         if ($tab === 'brackets') {
-            $bracketOptions = $this->reporting->getCompletedBracketSummaries($id)->values()->all();
+            $bracketOptions = $this->reporting->getAllBracketSummaries($id)->values()->all();
+            $bracketOptionsByDivision = collect($bracketOptions)->groupBy('division_id')->map(function ($opts, $divisionId) {
+                $first = $opts->first();
+                return [
+                    'division_id' => (int) $divisionId,
+                    'division_name' => $first['division_name'] ?? '—',
+                    'brackets' => $opts->values()->all(),
+                ];
+            })->values()->all();
             $raw = $request->query('brackets');
             if (is_array($raw)) {
                 $selectedBracketIds = array_values(array_map('intval', array_filter($raw)));
@@ -161,10 +173,10 @@ class TournamentController extends Controller
                 $selectedBracketIds = array_values(array_unique(array_map('intval', array_filter(explode(',', $raw)))));
             }
             foreach ($selectedBracketIds as $bid) {
-                if (! $this->reporting->isBracketComplete($id, $bid)) {
+                $meta = $this->reporting->getBracketMeta($id, $bid);
+                if ($meta === null) {
                     continue;
                 }
-                $meta = $this->reporting->getBracketMeta($id, $bid);
                 $bouts = $this->reporting->getBoutsForBracket($id, $bid);
                 $selectedBracketsData[] = (object) [
                     'bracket_id' => $bid,
@@ -188,6 +200,7 @@ class TournamentController extends Controller
             'resultsTeam' => $resultsTeam,
             'teamsForResults' => $teamsForResults,
             'bracketOptions' => $bracketOptions,
+            'bracketOptionsByDivision' => $bracketOptionsByDivision,
             'selectedBracketsData' => $selectedBracketsData,
             'selectedBracketIds' => $selectedBracketIds,
         ]);
@@ -256,5 +269,86 @@ class TournamentController extends Controller
             'data' => $data,
             'tid' => $tid,
         ]);
+    }
+
+    /**
+     * Public bout detail for bracket page side panel (HTML fragment).
+     * Only for completed bouts.
+     */
+    public function boutDetail(int $id, int $boutId): View|\Illuminate\Http\Response
+    {
+        $tournament = Tournament::find($id);
+        if (! $tournament) {
+            abort(404);
+        }
+
+        $boutRows = Bout::where('id', $boutId)->where('Tournament_Id', $id)->orderBy('Wrestler_Id')->get();
+        if ($boutRows->count() < 2) {
+            abort(404);
+        }
+
+        $state = BoutScoringState::where('tournament_id', $id)->where('bout_id', $boutId)->first();
+        if (! $state || $state->status !== 'completed') {
+            abort(404, 'Bout is not completed.');
+        }
+
+        $red = TournamentWrestler::where('Tournament_id', $id)->where('id', $state->red_wrestler_id)->first();
+        $green = TournamentWrestler::where('Tournament_id', $id)->where('id', $state->green_wrestler_id)->first();
+        if (! $red || ! $green) {
+            abort(404);
+        }
+
+        $firstRow = $boutRows->first();
+        $division = Division::where('id', $firstRow->Division_Id)->where('Tournament_Id', $id)->first();
+        $weightLabel = '—';
+        if ($division && $red->wr_weight && $green->wr_weight) {
+            $min = min((int) $red->wr_weight, (int) $green->wr_weight);
+            $max = max((int) $red->wr_weight, (int) $green->wr_weight);
+            $weightLabel = $min === $max ? (string) $min : $min . '-' . $max;
+        }
+
+        $events = BoutScoringEvent::where('tournament_id', $id)->where('bout_id', $boutId)->orderBy('id')->get();
+        $eventsByPeriod = $events->groupBy(fn ($e) => (int) ($e->period ?? 0));
+
+        $resultLabel = $state->result_type ? trim($state->result_type) : 'Decision';
+        $pin = (bool) $firstRow->pin;
+        $wrtime = $firstRow->wrtime ?? null;
+        $resultShort = $this->shortResultLabel($resultLabel, $pin, $wrtime);
+        $matNumber = $firstRow->mat_number ?? null;
+        $winnerScore = $state->winner_id === (int) $red->id ? $state->red_score : $state->green_score;
+        $loserScore = $state->winner_id === (int) $red->id ? $state->green_score : $state->red_score;
+        $resultLine = $resultShort . ' ' . $winnerScore . '-' . $loserScore . ($wrtime ? ' ' . $wrtime : '');
+
+        return view('tournaments.bout-detail-panel', [
+            'tournament' => $tournament,
+            'boutId' => $boutId,
+            'boutNumber' => $firstRow->bout_number ?? $boutId,
+            'weightLabel' => $weightLabel,
+            'state' => $state,
+            'red' => $red,
+            'green' => $green,
+            'eventsByPeriod' => $eventsByPeriod,
+            'resultShort' => $resultShort,
+            'resultLine' => $resultLine,
+            'matNumber' => $matNumber,
+        ]);
+    }
+
+    private function shortResultLabel(?string $resultType, bool $pin, ?string $wrtime): string
+    {
+        $r = strtolower((string) $resultType);
+        if ($pin || $r === 'pin') {
+            return 'PINS' . ($wrtime ? ' ' . $wrtime : '');
+        }
+        if ($r === 'technical fall' || $r === 'tech fall') {
+            return 'TF';
+        }
+        if ($r === 'major decision' || $r === 'major') {
+            return 'MD';
+        }
+        if ($wrtime) {
+            return 'F ' . $wrtime;
+        }
+        return $resultType ?: 'Decision';
     }
 }

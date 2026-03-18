@@ -1,12 +1,12 @@
 @extends('layouts.mat')
 
-@section('title', 'Summary – Bout ' . $boutId)
-@section('panel_title', 'Summary – Bout ' . $boutId)
+@section('title', 'Summary – Bout ' . ($boutNumber ?? $boutId))
+@section('panel_title', 'Summary – Bout ' . ($boutNumber ?? $boutId))
 
 @section('content')
 @include('mat.nav', ['boutId' => $boutId, 'current' => 'history'])
 
-<p><strong>{{ $divisionName }}</strong> — Bout {{ $boutId }}</p>
+<p><strong>{{ $divisionName }}</strong> — Bout {{ $boutNumber ?? $boutId }}</p>
 <div style="margin: 1rem 0;">
     <span style="color: #c00;">{{ $redWrestler->wr_first_name }} {{ $redWrestler->wr_last_name }} ({{ $redWrestler->wr_club }})</span>
     <span style="margin: 0 0.5rem;">vs</span>

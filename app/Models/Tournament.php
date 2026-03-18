@@ -30,11 +30,13 @@ class Tournament extends Model
         'pending_approval',
         'OpenDate',
         'ViewWrestlers',
+        'enable_challenge_matches',
         'usa_number_required',
         'Type',
     ];
 
     protected $casts = [
+        'enable_challenge_matches' => 'boolean',
         'usa_number_required' => 'boolean',
         'TournamentDate' => 'date',
         'end_date' => 'date',

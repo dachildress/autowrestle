@@ -21,6 +21,7 @@ class BoutNumberScheme extends Model
         'all_rounds',
         'mat_numbers',
         'round_numbers',
+        'same_mat_per_bracket',
     ];
 
     protected $casts = [
@@ -30,6 +31,7 @@ class BoutNumberScheme extends Model
         'all_rounds' => 'boolean',
         'mat_numbers' => 'array',
         'round_numbers' => 'array',
+        'same_mat_per_bracket' => 'boolean',
     ];
 
     public function tournament(): BelongsTo

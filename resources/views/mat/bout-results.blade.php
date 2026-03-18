@@ -1,6 +1,6 @@
 @extends('layouts.mat')
 
-@section('title', 'Results – Bout ' . $boutId)
+@section('title', 'Results – Bout ' . ($boutNumber ?? $boutId))
 
 @section('content')
 @include('mat.nav', ['boutId' => $boutId, 'current' => 'results'])
@@ -11,7 +11,7 @@
 
 <div style="max-width: 520px; margin: 0 auto;">
     <h2 style="text-align: center; margin-bottom: 1rem;">
-        <a href="{{ route('mat.bout.show', ['boutId' => $boutId]) }}" style="color: #2c3e50;">{{ $divisionName }} (Bout {{ $boutId }})</a>
+        <a href="{{ route('mat.bout.show', ['boutId' => $boutId]) }}" style="color: #2c3e50;">{{ $divisionName }} (Bout {{ $boutNumber ?? $boutId }})</a>
     </h2>
 
     <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem;">

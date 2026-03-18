@@ -147,6 +147,14 @@ class BracketReportingService
                 ->first();
         }
 
+        $wrestlerIds = $bracketRows->pluck('wr_Id')->unique()->values();
+        $weightRange = TournamentWrestler::where('Tournament_id', $tournamentId)
+            ->whereIn('id', $wrestlerIds)
+            ->selectRaw('MIN(COALESCE(wr_weight, 0)) as low, MAX(COALESCE(wr_weight, 0)) as high')
+            ->first();
+        $weightMin = $weightRange && $weightRange->low > 0 ? (int) $weightRange->low : null;
+        $weightMax = $weightRange && $weightRange->high > 0 ? (int) $weightRange->high : null;
+
         return [
             'tournament_id' => $tournamentId,
             'tournament_name' => $tournament ? $tournament->TournamentName : '—',
@@ -157,7 +165,62 @@ class BracketReportingService
             'group_name' => $group ? $group->Name : '—',
             'bracket_id' => $bracketId,
             'wrestler_count' => $bracketRows->count(),
+            'weight_min' => $weightMin,
+            'weight_max' => $weightMax,
         ];
+    }
+
+    /**
+     * List of all bracket summaries for a tournament (started or not, completed or not).
+     * Same shape as getCompletedBracketSummaries; completed_at/champion/placements are null/empty when bracket is not complete.
+     */
+    public function getAllBracketSummaries(int $tournamentId): Collection
+    {
+        $bracketIds = Bracket::where('Tournament_Id', $tournamentId)
+            ->select('brackets.id as bracket_id', 'brackets.Tournament_Id', 'brackets.Division_Id')
+            ->distinct()
+            ->get();
+
+        $out = collect();
+        foreach ($bracketIds as $row) {
+            $tid = (int) $row->Tournament_Id;
+            $bid = (int) $row->bracket_id;
+            $meta = $this->getBracketMeta($tid, $bid);
+            if ($meta === null) {
+                continue;
+            }
+            $completedAt = null;
+            $champion = null;
+            $placements = [];
+            if ($this->isBracketComplete($tid, $bid)) {
+                $completedAt = $this->getBracketCompletedAt($tid, $bid);
+                $placements = $this->getPlacementsForBracket($tid, $bid);
+                foreach ($placements as $p) {
+                    if ($p['place'] === 1) {
+                        $champion = $p['name'];
+                        break;
+                    }
+                }
+            }
+            $out->push([
+                'bracket_id' => $bid,
+                'tournament_id' => $tid,
+                'tournament_name' => $meta['tournament_name'],
+                'tournament_date' => $meta['tournament_date'],
+                'division_name' => $meta['division_name'],
+                'group_name' => $meta['group_name'],
+                'group_id' => $meta['group_id'],
+                'division_id' => $meta['division_id'],
+                'wrestler_count' => $meta['wrestler_count'],
+                'weight_min' => $meta['weight_min'] ?? null,
+                'weight_max' => $meta['weight_max'] ?? null,
+                'completed_at' => $completedAt,
+                'champion' => $champion,
+                'placements' => $placements,
+            ]);
+        }
+
+        return $out;
     }
 
     /**
@@ -288,8 +351,9 @@ class BracketReportingService
     }
 
     /**
-     * Get completed bouts for a bracket for public bracket display.
-     * Returns array of bout cards: bout_id, round, result_label (PINS, MD, F:00, etc.), time_display, is_pin, is_major, red_name, green_name, red_score, green_score, winner_id.
+     * Get bouts for a bracket for public bracket display (including not-yet-wrestled matchups).
+     * Returns array of bout cards: bout_id, round, result_label, time_display, red_name, green_name, etc.
+     * For completed bouts: full result; for scheduled but not wrestled: result_label/time_display as "—".
      */
     public function getBoutsForBracket(int $tournamentId, int $bracketId): array
     {
@@ -327,42 +391,73 @@ class BracketReportingService
             if (! $rows || $rows->count() < 2) {
                 continue;
             }
-            $state = $states->get($bid);
-            if (! $state) {
-                continue;
-            }
-            $redId = $state->red_wrestler_id;
-            $greenId = $state->green_wrestler_id;
-            $red = $wrestlers->get($redId);
-            $green = $wrestlers->get($greenId);
-            $redName = $red ? trim($red->wr_first_name . ' ' . $red->wr_last_name) : '–';
-            $greenName = $green ? trim($green->wr_first_name . ' ' . $green->wr_last_name) : '–';
             $firstRow = $rows->first();
             $round = $firstRow->round ?? 0;
-            $wrtime = $firstRow->wrtime ?? null;
-            $pin = (bool) $firstRow->pin;
-            $resultType = $state->result_type ? trim($state->result_type) : null;
-            $isPin = $pin || (strtolower((string) $resultType) === 'pin');
-            $isMajor = strtolower((string) $resultType) === 'major decision' || strtolower((string) $resultType) === 'major';
-            $resultLabel = $this->boutResultLabel($resultType, $pin, $wrtime);
-            $timeDisplay = $wrtime ?: ($isPin ? 'PINS' : 'F:00');
+            $state = $states->get($bid);
 
-            $result[] = [
-                'bout_id' => $bid,
-                'bout_number' => $firstRow->bout_number,
-                'round' => $round,
-                'result_label' => $resultLabel,
-                'time_display' => $timeDisplay,
-                'is_pin' => $isPin,
-                'is_major' => $isMajor,
-                'red_name' => $redName,
-                'green_name' => $greenName,
-                'red_wrestler_id' => $redId,
-                'green_wrestler_id' => $greenId,
-                'red_score' => (int) $state->red_score,
-                'green_score' => (int) $state->green_score,
-                'winner_id' => $state->winner_id,
-            ];
+            if ($state) {
+                $redId = $state->red_wrestler_id;
+                $greenId = $state->green_wrestler_id;
+                $red = $wrestlers->get($redId);
+                $green = $wrestlers->get($greenId);
+                $redName = $red ? trim($red->wr_first_name . ' ' . $red->wr_last_name) : '–';
+                $greenName = $green ? trim($green->wr_first_name . ' ' . $green->wr_last_name) : '–';
+                $redClub = $red ? ($red->wr_club ?? '') : '';
+                $greenClub = $green ? ($green->wr_club ?? '') : '';
+                $wrtime = $firstRow->wrtime ?? null;
+                $pin = (bool) $firstRow->pin;
+                $resultType = $state->result_type ? trim($state->result_type) : null;
+                $isPin = $pin || (strtolower((string) $resultType) === 'pin');
+                $isMajor = strtolower((string) $resultType) === 'major decision' || strtolower((string) $resultType) === 'major';
+                $resultLabel = $this->boutResultLabel($resultType, $pin, $wrtime);
+                $timeDisplay = $wrtime ?: ($isPin ? 'PINS' : 'F:00');
+                $result[] = [
+                    'bout_id' => $bid,
+                    'bout_number' => $firstRow->bout_number,
+                    'round' => $round,
+                    'result_label' => $resultLabel,
+                    'time_display' => $timeDisplay,
+                    'is_pin' => $isPin,
+                    'is_major' => $isMajor,
+                    'red_name' => $redName,
+                    'green_name' => $greenName,
+                    'red_club' => $redClub,
+                    'green_club' => $greenClub,
+                    'red_wrestler_id' => $redId,
+                    'green_wrestler_id' => $greenId,
+                    'red_score' => (int) $state->red_score,
+                    'green_score' => (int) $state->green_score,
+                    'winner_id' => $state->winner_id,
+                ];
+            } else {
+                $wrestlerIdsForBout = $rows->pluck('Wrestler_Id')->unique()->values();
+                $redId = $wrestlerIdsForBout->get(0);
+                $greenId = $wrestlerIdsForBout->get(1);
+                $red = $wrestlers->get($redId);
+                $green = $wrestlers->get($greenId);
+                $redName = $red ? trim($red->wr_first_name . ' ' . $red->wr_last_name) : '–';
+                $greenName = $green ? trim($green->wr_first_name . ' ' . $green->wr_last_name) : '–';
+                $redClub = $red ? ($red->wr_club ?? '') : '';
+                $greenClub = $green ? ($green->wr_club ?? '') : '';
+                $result[] = [
+                    'bout_id' => $bid,
+                    'bout_number' => $firstRow->bout_number,
+                    'round' => $round,
+                    'result_label' => '—',
+                    'time_display' => '—',
+                    'is_pin' => false,
+                    'is_major' => false,
+                    'red_name' => $redName,
+                    'green_name' => $greenName,
+                    'red_club' => $redClub,
+                    'green_club' => $greenClub,
+                    'red_wrestler_id' => $redId,
+                    'green_wrestler_id' => $greenId,
+                    'red_score' => 0,
+                    'green_score' => 0,
+                    'winner_id' => null,
+                ];
+            }
         }
 
         usort($result, function ($a, $b) {

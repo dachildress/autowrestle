@@ -35,11 +35,19 @@
                     'teams' => 'Teams',
                     'results' => 'Results',
                 ];
+                if (($tournament->enable_challenge_matches ?? false) && auth()->check()) {
+                    $navItems['challenge-match'] = 'Challenge Match';
+                }
             @endphp
             @foreach($navItems as $tabKey => $label)
                 <li>
-                    <a href="{{ route('tournaments.show', ['id' => $tournament->id, 'tab' => $tabKey]) }}"
-                       class="block px-4 py-3 no-underline border-b border-slate-200 last:border-b-0 {{ $tab === $tabKey ? 'bg-slate-100 text-slate-900 font-semibold border-l-4 border-l-aw-accent' : 'text-slate-900 hover:bg-slate-50' }}">
+                    @php
+                        $isChallenge = ($tabKey === 'challenge-match');
+                        $navHref = $isChallenge ? route('challenge.index', $tournament->id) : route('tournaments.show', ['id' => $tournament->id, 'tab' => $tabKey]);
+                        $isActive = $isChallenge ? false : ($tab === $tabKey);
+                    @endphp
+                    <a href="{{ $navHref }}"
+                       class="block px-4 py-3 no-underline border-b border-slate-200 last:border-b-0 {{ $isActive ? 'bg-slate-100 text-slate-900 font-semibold border-l-4 border-l-aw-accent' : 'text-slate-900 hover:bg-slate-50' }}">
                         {{ $label }}
                     </a>
                 </li>
@@ -266,25 +274,32 @@
                         <form method="get" action="{{ route('tournaments.show', ['id' => $tournament->id, 'tab' => 'brackets']) }}" id="brackets-form" class="flex flex-1 flex-col overflow-hidden">
                             <input type="hidden" name="tab" value="brackets">
                             <div class="flex-1 overflow-y-auto px-4 py-3">
-                                @php
-                                    $bracketOptionsByDivision = collect($bracketOptions ?? [])->groupBy('division_name');
-                                @endphp
-                                @forelse($bracketOptionsByDivision as $divisionName => $opts)
-                                    <div class="mb-4">
-                                        <p class="mb-2 font-medium text-slate-700">{{ $divisionName }}</p>
-                                        <ul class="space-y-1.5">
-                                            @foreach($opts as $opt)
-                                                <li class="flex items-center gap-2">
-                                                    <input type="checkbox" name="brackets[]" value="{{ $opt['bracket_id'] }}" id="bracket-{{ $opt['bracket_id'] }}" class="h-4 w-4 rounded border-slate-300 text-aw-accent focus:ring-aw-accent">
-                                                    <label for="bracket-{{ $opt['bracket_id'] }}" class="text-sm text-slate-900">{{ $opt['group_name'] ?? 'Bracket ' . $opt['bracket_id'] }}</label>
-                                                </li>
-                                            @endforeach
-                                        </ul>
+                                @forelse(($bracketOptionsByDivision ?? []) as $divIndex => $division)
+                                    <div class="mb-3 border border-slate-200 rounded-lg overflow-hidden">
+                                        <button type="button" class="bracket-division-toggle w-full flex items-center justify-between px-3 py-2.5 text-left font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 border-b border-slate-200" aria-expanded="true" data-target="bracket-div-{{ $divIndex }}">
+                                            <span>{{ $division['division_name'] }}</span>
+                                            <svg class="bracket-division-chevron h-5 w-5 text-slate-500 shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                        </button>
+                                        <div id="bracket-div-{{ $divIndex }}" class="bracket-division-content px-3 py-2">
+                                            <ul class="space-y-1.5">
+                                                @foreach($division['brackets'] as $opt)
+                                                    @php
+                                                        $wMin = $opt['weight_min'] ?? null;
+                                                        $wMax = $opt['weight_max'] ?? null;
+                                                        $weightLabel = ($wMin !== null && $wMax !== null && $wMin > 0) ? ($wMin === $wMax ? (string)$wMin : $wMin . ' – ' . $wMax) : ($opt['group_name'] ?? 'Bracket ' . $opt['bracket_id']);
+                                                    @endphp
+                                                    <li class="flex items-center gap-2">
+                                                        <input type="checkbox" name="brackets[]" value="{{ $opt['bracket_id'] }}" id="bracket-{{ $opt['bracket_id'] }}" class="h-4 w-4 rounded border-slate-300 text-aw-accent focus:ring-aw-accent">
+                                                        <label for="bracket-{{ $opt['bracket_id'] }}" class="text-sm text-slate-900">{{ $weightLabel }}</label>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
                                     </div>
                                 @empty
-                                    <p class="text-slate-600">No completed brackets yet. Brackets will appear here once they are finished.</p>
+                                    <p class="text-slate-600">No brackets yet. Brackets will appear here once divisions and weight classes have been created and bouted.</p>
                                 @endforelse
-                                @if(!empty($bracketOptions))
+                                @if(!empty($bracketOptionsByDivision))
                                     <div class="mt-4 border-t border-slate-200 pt-3">
                                         <label class="flex items-center gap-2 cursor-pointer">
                                             <input type="checkbox" id="brackets-select-all" class="h-4 w-4 rounded border-slate-300 text-aw-accent focus:ring-aw-accent">
@@ -300,7 +315,7 @@
                         </form>
                     </div>
                 </div>
-                @if(!empty($bracketOptions))
+                @if(!empty($bracketOptionsByDivision))
                 <script>
                     (function() {
                         var form = document.getElementById('brackets-form');
@@ -310,6 +325,17 @@
                                 form.querySelectorAll('input[name="brackets[]"]').forEach(function(cb) { cb.checked = selectAll.checked; });
                             });
                         }
+                        document.querySelectorAll('.bracket-division-toggle').forEach(function(btn) {
+                            btn.addEventListener('click', function() {
+                                var targetId = this.getAttribute('data-target');
+                                var content = document.getElementById(targetId);
+                                var chevron = this.querySelector('.bracket-division-chevron');
+                                var expanded = this.getAttribute('aria-expanded') === 'true';
+                                if (content) { content.classList.toggle('hidden', expanded); }
+                                if (chevron) { chevron.style.transform = expanded ? 'rotate(-90deg)' : 'rotate(0)'; }
+                                this.setAttribute('aria-expanded', !expanded);
+                            });
+                        });
                     })();
                 </script>
                 @endif
@@ -317,8 +343,12 @@
                 {{-- Selected brackets: tabs + bout cards --}}
                 <div class="mb-4 flex flex-wrap items-center gap-2">
                     @foreach($selectedBracketsData as $index => $bracketData)
+                        @php
+                            $m = $bracketData->meta;
+                            $chipWeight = (isset($m['weight_min']) && isset($m['weight_max']) && $m['weight_min'] > 0) ? ($m['weight_min'] === $m['weight_max'] ? (string)$m['weight_min'] : $m['weight_min'] . ' – ' . $m['weight_max']) : ($m['group_name'] ?? 'Bracket');
+                        @endphp
                         <div class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm">
-                            <span class="font-medium text-slate-900">{{ $bracketData->meta['group_name'] ?? 'Bracket' }} – {{ $bracketData->meta['division_name'] ?? '' }}</span>
+                            <span class="font-medium text-slate-900">{{ $chipWeight }} – {{ $m['division_name'] ?? '' }}</span>
                             <a href="{{ route('tournaments.show', ['id' => $tournament->id, 'tab' => 'brackets', 'brackets' => array_values(array_diff($selectedBracketIds, [$bracketData->bracket_id]))]) }}" class="ml-1 text-slate-400 hover:text-slate-600" aria-label="Remove bracket">×</a>
                         </div>
                     @endforeach
@@ -339,19 +369,28 @@
                                 <input type="hidden" name="brackets[]" value="{{ $bid }}">
                             @endforeach
                             <div class="flex-1 overflow-y-auto px-4 py-3">
-                                @php $bracketOptionsByDivision = collect($bracketOptions ?? [])->groupBy('division_name'); @endphp
-                                @foreach($bracketOptionsByDivision as $divisionName => $opts)
-                                    <div class="mb-4">
-                                        <p class="mb-2 font-medium text-slate-700">{{ $divisionName }}</p>
-                                        <ul class="space-y-1.5">
-                                            @foreach($opts as $opt)
-                                                <li class="flex items-center gap-2">
-                                                    @php $already = in_array($opt['bracket_id'], $selectedBracketIds); @endphp
-                                                    <input type="checkbox" name="brackets[]" value="{{ $opt['bracket_id'] }}" id="add-bracket-{{ $opt['bracket_id'] }}" class="h-4 w-4 rounded border-slate-300 text-aw-accent" {{ $already ? 'disabled' : '' }}>
-                                                    <label for="add-bracket-{{ $opt['bracket_id'] }}" class="text-sm {{ $already ? 'text-slate-400' : 'text-slate-900' }}">{{ $opt['group_name'] ?? 'Bracket ' . $opt['bracket_id'] }}{{ $already ? ' (already added)' : '' }}</label>
-                                                </li>
-                                            @endforeach
-                                        </ul>
+                                @foreach(($bracketOptionsByDivision ?? []) as $addDivIndex => $division)
+                                    <div class="mb-3 border border-slate-200 rounded-lg overflow-hidden">
+                                        <button type="button" class="add-bracket-division-toggle w-full flex items-center justify-between px-3 py-2.5 text-left font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 border-b border-slate-200" aria-expanded="true" data-target="add-bracket-div-{{ $addDivIndex }}">
+                                            <span>{{ $division['division_name'] }}</span>
+                                            <svg class="add-bracket-division-chevron h-5 w-5 text-slate-500 shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                        </button>
+                                        <div id="add-bracket-div-{{ $addDivIndex }}" class="add-bracket-division-content px-3 py-2">
+                                            <ul class="space-y-1.5">
+                                                @foreach($division['brackets'] as $opt)
+                                                    @php
+                                                        $addWMin = $opt['weight_min'] ?? null;
+                                                        $addWMax = $opt['weight_max'] ?? null;
+                                                        $addWeightLabel = ($addWMin !== null && $addWMax !== null && $addWMin > 0) ? ($addWMin === $addWMax ? (string)$addWMin : $addWMin . ' – ' . $addWMax) : ($opt['group_name'] ?? 'Bracket ' . $opt['bracket_id']);
+                                                        $already = in_array($opt['bracket_id'], $selectedBracketIds);
+                                                    @endphp
+                                                    <li class="flex items-center gap-2">
+                                                        <input type="checkbox" name="brackets[]" value="{{ $opt['bracket_id'] }}" id="add-bracket-{{ $opt['bracket_id'] }}" class="h-4 w-4 rounded border-slate-300 text-aw-accent" {{ $already ? 'disabled' : '' }}>
+                                                        <label for="add-bracket-{{ $opt['bracket_id'] }}" class="text-sm {{ $already ? 'text-slate-400' : 'text-slate-900' }}">{{ $addWeightLabel }}{{ $already ? ' (already added)' : '' }}</label>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
                                     </div>
                                 @endforeach
                             </div>
@@ -362,54 +401,143 @@
                         </form>
                     </div>
                 </div>
+                <script>
+                    (function() {
+                        document.querySelectorAll('.add-bracket-division-toggle').forEach(function(btn) {
+                            btn.addEventListener('click', function() {
+                                var targetId = this.getAttribute('data-target');
+                                var content = document.getElementById(targetId);
+                                var chevron = this.querySelector('.add-bracket-division-chevron');
+                                var expanded = this.getAttribute('aria-expanded') === 'true';
+                                if (content) { content.classList.toggle('hidden', expanded); }
+                                if (chevron) { chevron.style.transform = expanded ? 'rotate(-90deg)' : 'rotate(0)'; }
+                                this.setAttribute('aria-expanded', !expanded);
+                            });
+                        });
+                    })();
+                </script>
 
                 {{-- Bout cards for each selected bracket --}}
                 @foreach($selectedBracketsData as $bracketData)
+                    @php
+                        $headMeta = $bracketData->meta;
+                        $headWeight = (isset($headMeta['weight_min']) && isset($headMeta['weight_max']) && $headMeta['weight_min'] > 0) ? ($headMeta['weight_min'] === $headMeta['weight_max'] ? (string)$headMeta['weight_min'] : $headMeta['weight_min'] . ' – ' . $headMeta['weight_max']) : ($headMeta['group_name'] ?? 'Bracket');
+                    @endphp
                     <div class="mb-8">
-                        <h3 class="mb-3 text-base font-semibold text-slate-900">{{ $bracketData->meta['group_name'] ?? 'Bracket' }} – {{ $bracketData->meta['division_name'] ?? '' }}</h3>
+                        <h3 class="mb-3 text-base font-semibold text-slate-900">{{ $headWeight }} – {{ $headMeta['division_name'] ?? '' }}</h3>
                         @if(empty($bracketData->bouts))
                             <p class="text-slate-600">No bout data for this bracket.</p>
                         @else
-                            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                @foreach($bracketData->bouts as $bout)
-                                    <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-                                        <div class="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                                            <span class="font-mono font-medium text-slate-900">#{{ $bout['bout_number'] ?? $bout['bout_id'] }}</span>
-                                            @if($bout['round'] > 0)
-                                                <span class="text-slate-600">Round {{ $bout['round'] }}</span>
-                                            @endif
-                                            @if($bout['is_pin'])
-                                                <x-icons.pin class="h-4 w-4 text-amber-600" />
-                                            @elseif($bout['is_major'])
-                                                <x-icons.major class="h-4 w-4 text-slate-600" />
-                                            @endif
-                                            <span class="font-medium text-slate-700">{{ $bout['result_label'] }}</span>
-                                        </div>
-                                        <div class="space-y-1 text-sm text-slate-700">
+                            @php
+                                $boutsByRound = collect($bracketData->bouts)->groupBy('round');
+                                $rounds = $boutsByRound->keys()->sort()->values()->all();
+                            @endphp
+                            <div class="flex flex-wrap gap-6 overflow-x-auto pb-2">
+                                @foreach($rounds as $roundNum)
+                                    @php $roundBouts = $boutsByRound->get($roundNum, []); @endphp
+                                    <div class="flex flex-col gap-3 shrink-0" style="min-width: 12rem;">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Round {{ $roundNum }}</p>
+                                        @foreach($roundBouts as $bout)
                                             @php
                                                 $winnerId = $bout['winner_id'] ?? null;
                                                 $redWins = $winnerId !== null && $winnerId == ($bout['red_wrestler_id'] ?? null);
                                                 $greenWins = $winnerId !== null && $winnerId == ($bout['green_wrestler_id'] ?? null);
+                                                $resultTime = trim(($bout['result_label'] ?? '') . ' ' . ($bout['time_display'] ?? ''));
+                                                $boutCompleted = $winnerId !== null;
                                             @endphp
-                                            <p>
-                                                @if($redWins)
-                                                    <span class="font-bold">» {{ $bout['red_name'] }}</span> <span class="text-slate-500">{{ $bout['red_score'] ?? 0 }}</span><br>
-                                                    <span>{{ $bout['green_name'] }}</span> <span class="text-slate-500">{{ $bout['green_score'] ?? 0 }}</span>
-                                                @elseif($greenWins)
-                                                    <span>{{ $bout['red_name'] }}</span> <span class="text-slate-500">{{ $bout['red_score'] ?? 0 }}</span><br>
-                                                    <span class="font-bold">» {{ $bout['green_name'] }}</span> <span class="text-slate-500">{{ $bout['green_score'] ?? 0 }}</span>
-                                                @else
-                                                    <span>{{ $bout['red_name'] }}</span> <span class="text-slate-500">{{ $bout['red_score'] ?? 0 }}</span><br>
-                                                    <span>{{ $bout['green_name'] }}</span> <span class="text-slate-500">{{ $bout['green_score'] ?? 0 }}</span>
-                                                @endif
-                                            </p>
-                                        </div>
+                                            <div class="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden {{ $boutCompleted ? 'bout-card-clickable cursor-pointer hover:border-aw-accent hover:shadow-md transition-shadow' : '' }}"
+                                                @if($boutCompleted) role="button" tabindex="0" data-tournament-id="{{ $tournament->id }}" data-bout-id="{{ $bout['bout_id'] }}" aria-label="View bout #{{ $bout['bout_number'] ?? $bout['bout_id'] }} details" @endif>
+                                                <div class="flex justify-between items-center px-3 py-1.5 border-b border-slate-100 bg-slate-50/50 text-sm">
+                                                    <span class="font-mono font-medium text-slate-700">#{{ $bout['bout_number'] ?? $bout['bout_id'] }}</span>
+                                                    <span class="font-medium text-slate-600">{{ $resultTime ?: '—' }}</span>
+                                                </div>
+                                                <div class="px-3 py-2 space-y-1 text-sm">
+                                                    <div class="flex justify-between items-center gap-2 {{ $redWins ? 'font-bold text-slate-900 border-r-4 border-slate-900 pr-2' : 'text-slate-700' }}">
+                                                        <span class="min-w-0 truncate">{{ $bout['red_name'] }}</span>
+                                                        @if(!empty($bout['red_club'] ?? ''))
+                                                            <span class="shrink-0 text-slate-500 text-xs">{{ $bout['red_club'] }}</span>
+                                                        @endif
+                                                        <span class="shrink-0 tabular-nums">{{ $bout['red_score'] ?? 0 }}</span>
+                                                    </div>
+                                                    <div class="flex justify-between items-center gap-2 {{ $greenWins ? 'font-bold text-slate-900 border-r-4 border-slate-900 pr-2' : 'text-slate-700' }}">
+                                                        <span class="min-w-0 truncate">{{ $bout['green_name'] }}</span>
+                                                        @if(!empty($bout['green_club'] ?? ''))
+                                                            <span class="shrink-0 text-slate-500 text-xs">{{ $bout['green_club'] }}</span>
+                                                        @endif
+                                                        <span class="shrink-0 tabular-nums">{{ $bout['green_score'] ?? 0 }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
                                     </div>
                                 @endforeach
                             </div>
                         @endif
                     </div>
                 @endforeach
+
+                {{-- Side panel for bout detail (opened when a completed bout card is clicked) --}}
+                <div id="bout-detail-panel" class="fixed inset-y-0 right-0 z-50 hidden w-full max-w-md flex-col bg-white shadow-xl" aria-hidden="true">
+                    <div id="bout-detail-panel-inner" class="flex flex-col h-full overflow-hidden p-4">
+                        <div class="flex items-center justify-center py-12 text-slate-500" id="bout-detail-loading">Loading…</div>
+                        <div id="bout-detail-content" class="hidden flex-1 flex flex-col overflow-hidden"></div>
+                    </div>
+                </div>
+                <div id="bout-detail-backdrop" class="fixed inset-0 z-40 hidden bg-slate-900/30" aria-hidden="true"></div>
+                <script>
+                    (function() {
+                        var panel = document.getElementById('bout-detail-panel');
+                        var backdrop = document.getElementById('bout-detail-backdrop');
+                        var contentEl = document.getElementById('bout-detail-content');
+                        var loadingEl = document.getElementById('bout-detail-loading');
+                        var baseUrl = '{{ url('/tournaments/' . $tournament->id . '/bout-detail') }}';
+
+                        function openPanel() {
+                            panel.classList.remove('hidden');
+                            panel.setAttribute('aria-hidden', 'false');
+                            backdrop.classList.remove('hidden');
+                            backdrop.setAttribute('aria-hidden', 'false');
+                        }
+                        function closePanel() {
+                            panel.classList.add('hidden');
+                            panel.setAttribute('aria-hidden', 'true');
+                            backdrop.classList.add('hidden');
+                            backdrop.setAttribute('aria-hidden', 'true');
+                        }
+
+                        document.addEventListener('click', function(e) {
+                            var card = e.target.closest('.bout-card-clickable');
+                            if (card) {
+                                e.preventDefault();
+                                var tid = card.getAttribute('data-tournament-id');
+                                var bid = card.getAttribute('data-bout-id');
+                                if (!tid || !bid) return;
+                                contentEl.classList.add('hidden');
+                                contentEl.innerHTML = '';
+                                loadingEl.classList.remove('hidden');
+                                openPanel();
+                                fetch(baseUrl + '/' + bid, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } })
+                                    .then(function(r) { return r.text(); })
+                                        .then(function(html) {
+                                        loadingEl.classList.add('hidden');
+                                        contentEl.innerHTML = html;
+                                        contentEl.classList.remove('hidden');
+                                    })
+                                    .catch(function() {
+                                        loadingEl.textContent = 'Could not load bout details.';
+                                    });
+                                return;
+                            }
+                            if (e.target.closest('.bout-panel-close') || e.target === backdrop) {
+                                closePanel();
+                            }
+                        });
+                        backdrop.addEventListener('click', closePanel);
+                        document.addEventListener('keydown', function(e) {
+                            if (e.key === 'Escape' && panel && !panel.classList.contains('hidden')) closePanel();
+                        });
+                    })();
+                </script>
             @endif
 
         @elseif($tab === 'teams')

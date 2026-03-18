@@ -160,6 +160,7 @@ class ImportSettingsService
                 'all_rounds' => $src->all_rounds,
                 'mat_numbers' => $src->mat_numbers,
                 'round_numbers' => $src->round_numbers,
+                'same_mat_per_bracket' => (bool) ($src->same_mat_per_bracket ?? false),
             ]);
 
             foreach ($src->schemeGroups as $sg) {

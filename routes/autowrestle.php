@@ -13,6 +13,7 @@ Route::get('/tournaments/list', [\App\Http\Controllers\TournamentController::cla
 Route::get('/tournaments/mybout/search/{tid}', [\App\Http\Controllers\TournamentController::class, 'myboutSearch'])->name('mybouts.search')->where('tid', '[0-9]+');
 Route::get('/tournaments/mybout/{tid}/{wid}', [\App\Http\Controllers\TournamentController::class, 'mybouts'])->name('mybouts.show')->where(['tid' => '[0-9]+', 'wid' => '[0-9]+']);
 Route::get('/tournaments/{id}', [\App\Http\Controllers\TournamentController::class, 'show'])->name('tournaments.show')->where('id', '[0-9]+');
+Route::get('/tournaments/{id}/bout-detail/{boutId}', [\App\Http\Controllers\TournamentController::class, 'boutDetail'])->name('tournaments.bout-detail')->where(['id' => '[0-9]+', 'boutId' => '[0-9]+']);
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/mat', [\App\Http\Controllers\MatDashboardController::class, 'index'])->name('mat.dashboard');
@@ -49,6 +50,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/tournaments/register/addwrestler/{wid}/{tid}', [\App\Http\Controllers\RegistrationController::class, 'addWrestlerForm'])->name('tournaments.register.add')->where(['wid' => '[0-9]+', 'tid' => '[0-9]+']);
     Route::post('/tournaments/register/insertwrestler/{wid}/{tid}', [\App\Http\Controllers\RegistrationController::class, 'insertWrestler'])->name('tournaments.register.insert')->where(['wid' => '[0-9]+', 'tid' => '[0-9]+']);
     Route::get('/tournaments/register/withdrawwrestler/{wid}/{tid}', [\App\Http\Controllers\RegistrationController::class, 'removeWrestler'])->name('tournaments.register.withdraw')->where(['wid' => '[0-9]+', 'tid' => '[0-9]+']);
+
+    // Challenge matches (parent flow)
+    Route::get('/tournaments/{id}/challenge-match', [\App\Http\Controllers\ChallengeMatchController::class, 'index'])->name('challenge.index')->where('id', '[0-9]+');
+    Route::get('/tournaments/{id}/challenge-match/create', [\App\Http\Controllers\ChallengeMatchController::class, 'create'])->name('challenge.create')->where('id', '[0-9]+');
+    Route::get('/tournaments/{id}/challenge-match/select-opponent', [\App\Http\Controllers\ChallengeMatchController::class, 'selectOpponent'])->name('challenge.select-opponent')->where('id', '[0-9]+');
+    Route::post('/tournaments/{id}/challenge-match', [\App\Http\Controllers\ChallengeMatchController::class, 'store'])->name('challenge.store')->where('id', '[0-9]+');
+    Route::get('/tournaments/{tid}/challenge-match/{challengeId}', [\App\Http\Controllers\ChallengeMatchController::class, 'show'])->name('challenge.show')->where(['tid' => '[0-9]+', 'challengeId' => '[0-9]+']);
+    Route::post('/tournaments/{tid}/challenge-match/{challengeId}/accept', [\App\Http\Controllers\ChallengeMatchController::class, 'accept'])->name('challenge.accept')->where(['tid' => '[0-9]+', 'challengeId' => '[0-9]+']);
+    Route::post('/tournaments/{tid}/challenge-match/{challengeId}/decline', [\App\Http\Controllers\ChallengeMatchController::class, 'decline'])->name('challenge.decline')->where(['tid' => '[0-9]+', 'challengeId' => '[0-9]+']);
 });
 
 require __DIR__.'/autowrestle_manage.php';

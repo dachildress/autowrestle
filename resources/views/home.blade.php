@@ -36,7 +36,7 @@
                     @endif
                     @if($tournament->ViewWrestlers)
                         <p class="mt-2">
-                            <x-button href="{{ route('tournaments.show', $tournament->id) }}" variant="primary">View Registered Wrestlers</x-button>
+                            <x-button href="{{ route('tournaments.show', ['id' => $tournament->id, 'tab' => 'teams']) }}" variant="primary">View Registered Wrestlers</x-button>
                         </p>
                     @endif
                 </article>

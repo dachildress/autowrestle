@@ -82,6 +82,7 @@ class BoutNumberSchemeController extends Controller
             'round_numbers.*' => 'integer|min:1|max:10',
             'group_ids' => 'nullable|array',
             'group_ids.*' => 'string',
+            'same_mat_per_bracket' => 'nullable|in:0,1',
         ]);
 
         if ((int) $valid['all_mats'] === 0 && (empty($valid['mat_numbers']) || ! is_array($valid['mat_numbers']))) {
@@ -111,6 +112,7 @@ class BoutNumberSchemeController extends Controller
             'all_rounds' => (int) $valid['all_rounds'] === 1,
             'mat_numbers' => (int) $valid['all_mats'] === 0 ? array_values(array_map('intval', $valid['mat_numbers'])) : null,
             'round_numbers' => (int) $valid['all_rounds'] === 0 ? array_values(array_map('intval', $valid['round_numbers'])) : null,
+            'same_mat_per_bracket' => ! empty($valid['same_mat_per_bracket']),
         ]);
 
         if ((int) $valid['all_groups'] === 0 && ! empty($valid['group_ids'])) {
@@ -168,6 +170,7 @@ class BoutNumberSchemeController extends Controller
             'round_numbers.*' => 'integer|min:1|max:10',
             'group_ids' => 'nullable|array',
             'group_ids.*' => 'string',
+            'same_mat_per_bracket' => 'nullable|in:0,1',
         ]);
 
         if ((int) $valid['all_mats'] === 0 && (empty($valid['mat_numbers']) || ! is_array($valid['mat_numbers']))) {
@@ -196,6 +199,7 @@ class BoutNumberSchemeController extends Controller
             'all_rounds' => (int) $valid['all_rounds'] === 1,
             'mat_numbers' => (int) $valid['all_mats'] === 0 ? array_values(array_map('intval', $valid['mat_numbers'])) : null,
             'round_numbers' => (int) $valid['all_rounds'] === 0 ? array_values(array_map('intval', $valid['round_numbers'])) : null,
+            'same_mat_per_bracket' => ! empty($valid['same_mat_per_bracket']),
         ]);
 
         BoutNumberSchemeGroup::where('bout_number_scheme_id', $scheme->id)->delete();

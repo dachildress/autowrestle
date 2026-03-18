@@ -41,6 +41,7 @@
                             <th class="px-4 py-3 text-left font-semibold text-slate-900">Mats</th>
                             <th class="px-4 py-3 text-left font-semibold text-slate-900">Groups</th>
                             <th class="px-4 py-3 text-left font-semibold text-slate-900">Rounds</th>
+                            <th class="px-4 py-3 text-left font-semibold text-slate-900">Same mat/bracket</th>
                             <th class="px-4 py-3 text-right font-semibold text-slate-900">Actions</th>
                         </tr>
                     </thead>
@@ -53,6 +54,7 @@
                                 <td class="px-4 py-3 text-slate-700">{{ $s->all_mats ? 'All Mats' : implode(', ', $s->mat_numbers ?? []) }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $s->all_groups ? 'All Groups' : $s->schemeGroups->count() . ' selected' }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $s->all_rounds ? 'All Rounds' : implode(', ', array_map(fn ($r) => 'R' . $r, $s->round_numbers ?? [])) }}</td>
+                                <td class="px-4 py-3 text-slate-700">{{ ($s->same_mat_per_bracket ?? false) ? 'Yes' : 'No' }}</td>
                                 <td class="px-4 py-3 text-right">
                                     <a href="{{ route('manage.number-schemes.edit', [$tournament->id, $s->id]) }}" class="text-aw-accent hover:underline">Edit</a>
                                     | <a href="{{ route('manage.number-schemes.destroy', [$tournament->id, $s->id]) }}" onclick="return confirm('Delete this number scheme?');" class="text-red-600 hover:underline">Delete</a>

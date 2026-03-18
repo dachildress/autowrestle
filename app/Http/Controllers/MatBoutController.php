@@ -88,8 +88,11 @@ class MatBoutController extends Controller
             $periodDurations = DivisionPeriodService::DEFAULT_DURATIONS;
         }
 
+        $boutNumber = $rows[0]->bout_number ?? $boutId;
+
         return view('mat.bout-show', [
             'boutId' => $boutId,
+            'boutNumber' => $boutNumber,
             'matNumber' => $user->mat_number,
             'state' => $state,
             'redWrestler' => $redWrestler,
@@ -144,9 +147,11 @@ class MatBoutController extends Controller
             ->get();
 
         $eventsByPeriod = $events->groupBy(fn ($e) => $e->period ?? 0);
+        $boutNumber = $rows[0]->bout_number ?? $boutId;
 
         return view('mat.bout-history', [
             'boutId' => $boutId,
+            'boutNumber' => $boutNumber,
             'matNumber' => $user->mat_number,
             'state' => $state,
             'redWrestler' => $redWrestler,
@@ -224,8 +229,10 @@ class MatBoutController extends Controller
         ];
 
         $completedAt = $state->completed_at ?? now();
+        $boutNumber = $rows[0]->bout_number ?? $boutId;
         return view('mat.bout-results', [
             'boutId' => $boutId,
+            'boutNumber' => $boutNumber,
             'matNumber' => $user->mat_number,
             'state' => $state,
             'redWrestler' => $redWrestler,

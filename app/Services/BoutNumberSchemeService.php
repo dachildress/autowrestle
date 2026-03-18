@@ -51,6 +51,8 @@ class BoutNumberSchemeService
             $mats = [1];
             $matCount = 1;
         }
+        $sameMatPerBracket = (bool) $scheme->same_mat_per_bracket;
+        $bracketMatMap = [];
 
         $bracketRoundList = $this->orderedBracketRoundsForDivision($tid, $did, $groupKeys, $rounds);
 
@@ -86,8 +88,16 @@ class BoutNumberSchemeService
 
                 $boutId = $nextId++;
                 $boutNumber = $nextBoutNumber++;
-                $matNumber = $mats[$matIndex % $matCount];
-                $matIndex++;
+                if ($sameMatPerBracket) {
+                    if (! isset($bracketMatMap[$bracketId])) {
+                        $bracketMatMap[$bracketId] = $mats[$matIndex % $matCount];
+                        $matIndex++;
+                    }
+                    $matNumber = $bracketMatMap[$bracketId];
+                } else {
+                    $matNumber = $mats[$matIndex % $matCount];
+                    $matIndex++;
+                }
 
                 foreach ($rows as $bracketRow) {
                     Bout::insert([
@@ -173,8 +183,8 @@ class BoutNumberSchemeService
     }
 
     /**
-     * Ordered list of (bracket_id, round, division_id) for numbering: lowest grade first, then bracket, then round.
-     * Ensures all rounds for one bracket are adjacent so round-1 bouts are back-to-back.
+     * Ordered list of (bracket_id, round, division_id) for numbering: round first, then group, then bracket.
+     * So bout numbers run sequentially by round: all round 1 (4000..4036), then round 2 (4037..), etc.
      */
     private function orderedBracketRoundsForDivision(int $tid, int $did, array $groupKeys, array $rounds): array
     {
@@ -187,21 +197,21 @@ class BoutNumberSchemeService
             ->get();
 
         $result = [];
-        foreach ($groups as $group) {
-            $bracketIds = Bracket::where('Tournament_Id', $tid)
-                ->where('Division_Id', $did)
-                ->whereIn('id', TournamentWrestler::where('Tournament_id', $tid)
-                    ->where('division_id', $did)
-                    ->where('group_id', $group->id)
-                    ->whereNotNull('wr_bracket_id')
-                    ->pluck('wr_bracket_id'))
-                ->where('bouted', 0)
-                ->distinct()
-                ->orderBy('id')
-                ->pluck('id');
+        foreach ($rounds as $round) {
+            foreach ($groups as $group) {
+                $bracketIds = Bracket::where('Tournament_Id', $tid)
+                    ->where('Division_Id', $did)
+                    ->whereIn('id', TournamentWrestler::where('Tournament_id', $tid)
+                        ->where('division_id', $did)
+                        ->where('group_id', $group->id)
+                        ->whereNotNull('wr_bracket_id')
+                        ->pluck('wr_bracket_id'))
+                    ->where('bouted', 0)
+                    ->distinct()
+                    ->orderBy('id')
+                    ->pluck('id');
 
-            foreach ($bracketIds as $bracketId) {
-                foreach ($rounds as $round) {
+                foreach ($bracketIds as $bracketId) {
                     $result[] = [
                         'bracket_id' => $bracketId,
                         'round' => $round,
@@ -219,6 +229,29 @@ class BoutNumberSchemeService
     public function schemeAppliesToDivision(BoutNumberScheme $scheme, int $tid, int $did): bool
     {
         return count($this->resolveGroupKeysForDivision($scheme, $tid, $did)) > 0;
+    }
+
+    /**
+     * Prefer a scheme that has explicit mat_numbers for this division (e.g. JR on mats 5–6)
+     * over a scheme that uses all_mats (which would assign 1–6). Returns null if none apply.
+     */
+    public function getPreferredSchemeForDivision(int $tid, int $did): ?BoutNumberScheme
+    {
+        $applicable = BoutNumberScheme::where('tournament_id', $tid)
+            ->get()
+            ->filter(fn (BoutNumberScheme $s) => $this->schemeAppliesToDivision($s, $tid, $did));
+
+        if ($applicable->isEmpty()) {
+            return null;
+        }
+
+        // Prefer schemes with explicit mat_numbers (all_mats = false) so division-specific mats (e.g. JR → 5,6) win
+        $withExplicitMats = $applicable->filter(fn (BoutNumberScheme $s) => ! $s->all_mats && is_array($s->mat_numbers) && ! empty($s->mat_numbers));
+        if ($withExplicitMats->isNotEmpty()) {
+            return $withExplicitMats->first();
+        }
+
+        return $applicable->first();
     }
 
     /**

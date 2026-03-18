@@ -45,14 +45,6 @@ class ManageBoutController extends Controller
         $schemeService = app(BoutNumberSchemeService::class);
         $wantsJson = $request->wantsJson() || $request->ajax();
 
-        if (! $schemeService->divisionHasScheme($tid, $did)) {
-            $message = 'No number scheme applies to ' . $division->DivisionName . '. Add a scheme under Number Schemes first.';
-            if ($wantsJson) {
-                return response()->json(['success' => false, 'message' => $message], 422);
-            }
-            return redirect()->route('manage.tournaments.show', $tid)->with('error', $message);
-        }
-
         $schemeId = $request->query('scheme_id');
         if ($schemeId !== null) {
             $scheme = BoutNumberScheme::where('id', (int) $schemeId)->where('tournament_id', $tid)->firstOrFail();
@@ -64,7 +56,14 @@ class ManageBoutController extends Controller
                 return redirect()->route('manage.tournaments.show', $tid)->with('error', $message);
             }
         } else {
-            $scheme = BoutNumberScheme::where('tournament_id', $tid)->get()->first(fn ($s) => $schemeService->schemeAppliesToDivision($s, $tid, $did));
+            $scheme = $schemeService->getPreferredSchemeForDivision($tid, $did);
+            if (! $scheme) {
+                $message = 'No number scheme applies to ' . $division->DivisionName . '. Add a scheme under Number Schemes first.';
+                if ($wantsJson) {
+                    return response()->json(['success' => false, 'message' => $message], 422);
+                }
+                return redirect()->route('manage.tournaments.show', $tid)->with('error', $message);
+            }
         }
 
         $schemeService->runSchemeForDivision($tid, $did, $scheme->id);
@@ -150,6 +149,16 @@ class ManageBoutController extends Controller
                 ];
             }
         }
+
+        usort($bouts, function ($a, $b) {
+            $an = $a->bout_number ?? $a->id;
+            $bn = $b->bout_number ?? $b->id;
+            if (is_numeric($an) && is_numeric($bn)) {
+                return (int) $an <=> (int) $bn;
+            }
+            $roundCmp = (int) $a->round <=> (int) $b->round;
+            return $roundCmp !== 0 ? $roundCmp : $a->id <=> $b->id;
+        });
 
         return view('manage.bouts.print', [
             'tournament' => $tournament,

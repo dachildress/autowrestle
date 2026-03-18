@@ -65,6 +65,9 @@
                         @endif
                         <li><a href="{{ route('manage.import-settings.index', $tournament->id) }}">Import Settings</a></li>
                         <li><a href="{{ route('manage.checklist.index', $tournament->id) }}">Checklist</a></li>
+                        @if($tournament->enable_challenge_matches ?? false)
+                        <li><a href="{{ route('manage.challenge-requests.index', $tournament->id) }}">Challenge requests</a></li>
+                        @endif
                     </ul>
                 </span>
                 <span class="nav-dropdown">
@@ -257,7 +260,7 @@
                             <li><a href="{{ route('manage.content.index') }}">Site content</a></li>
                             @endif
                             @if(auth()->user()->isAdmin() || auth()->user()->managedTournaments()->exists())
-                                <li><a href="#">Add New Team</a></li>
+                                <li><a href="{{ route('wrestlers.clubs.create') }}">Add New Team</a></li>
                             @endif
                             <li><a href="{{ url('/logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a></li>
                         @endif

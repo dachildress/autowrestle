@@ -32,6 +32,7 @@ class Bout extends Model
         'printed',
         'Division_Id',
         'completed',
+        'challenge_request_id',
     ];
 
     protected $casts = [
@@ -54,5 +55,15 @@ class Bout extends Model
     public function division(): BelongsTo
     {
         return $this->belongsTo(Division::class, 'Division_Id', 'id');
+    }
+
+    public function challengeRequest(): BelongsTo
+    {
+        return $this->belongsTo(ChallengeRequest::class, 'challenge_request_id', 'id');
+    }
+
+    public function isChallengeMatch(): bool
+    {
+        return $this->challenge_request_id !== null;
     }
 }

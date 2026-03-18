@@ -123,6 +123,14 @@
                 </select>
             </div>
 
+            <div>
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="same_mat_per_bracket" value="1" {{ old('same_mat_per_bracket', $scheme->same_mat_per_bracket) ? 'checked' : '' }} class="rounded border-slate-300 text-aw-accent">
+                    <span class="text-sm font-medium text-slate-700">Keep same bracket on same mat</span>
+                </label>
+                <p class="mt-1 text-sm text-slate-500">When checked, all bouts for a bracket (all rounds) are assigned to one mat instead of rotating across mats.</p>
+            </div>
+
             <div class="flex gap-3 pt-2">
                 <x-button type="submit" variant="primary">Update</x-button>
                 <a href="{{ route('manage.number-schemes.index', $tournament->id) }}" class="inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">Cancel</a>

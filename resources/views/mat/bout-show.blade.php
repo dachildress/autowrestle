@@ -1,6 +1,6 @@
 @extends('layouts.mat')
 
-@section('title', 'Bout ' . $boutId . ' – Mat-side scoring')
+@section('title', 'Bout ' . ($boutNumber ?? $boutId) . ' – Mat-side scoring')
 
 @php
     $fmtTime = fn ($sec) => sprintf('%d:%02d', (int)($sec / 60), (int)($sec % 60));
@@ -64,7 +64,7 @@
         <form id="mat-logout-form" action="{{ url('/logout') }}" method="post" style="display: none;">@csrf</form>
     </nav>
     <div class="mat-scoring-main">
-        <p style="margin: 0 0 0.5rem;"><strong>{{ $divisionName }}</strong> — Bout {{ $boutId }}</p>
+        <p style="margin: 0 0 0.5rem;"><strong>{{ $divisionName }}</strong> — Bout {{ $boutNumber ?? $boutId }}</p>
 
 @php
     $initialState = [

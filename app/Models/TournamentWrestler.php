@@ -53,4 +53,11 @@ class TournamentWrestler extends Model
     {
         return trim($this->wr_first_name . ' ' . $this->wr_last_name);
     }
+
+    /** Parent/guardian user id (owner of the wrestler). Null if wrestler has no user. */
+    public function getParentUserId(): ?int
+    {
+        $wrestler = $this->wrestler;
+        return $wrestler && $wrestler->user_id ? (int) $wrestler->user_id : null;
+    }
 }

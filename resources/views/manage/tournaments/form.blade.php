@@ -77,6 +77,11 @@
         <label for="usa_number_required" class="text-sm font-medium text-slate-700">USA Wrestling number required to enter tournament</label>
     </div>
     <p class="text-xs text-slate-500">When checked, wrestlers must have a USA Wrestling number saved on their profile before they can be added to this tournament.</p>
+    <div class="flex items-center gap-2">
+        <input type="checkbox" name="enable_challenge_matches" id="enable_challenge_matches" value="1" {{ old('enable_challenge_matches', $tournament?->enable_challenge_matches ?? false) ? 'checked' : '' }} class="h-4 w-4 rounded border-slate-300 text-aw-primary">
+        <label for="enable_challenge_matches" class="text-sm font-medium text-slate-700">Enable challenge matches</label>
+    </div>
+    <p class="text-xs text-slate-500">When enabled, parents can request challenge matches between their wrestlers and others in this tournament. Requests require opponent acceptance and director approval.</p>
     <div class="flex gap-3 pt-2">
         <button type="submit" class="inline-flex items-center rounded-md bg-aw-primary px-4 py-2 text-sm font-medium text-white hover:bg-aw-primary/90">{{ $tournament ? 'Save' : 'Create Tournament' }}</button>
         <a href="{{ $tournament ? route('manage.view.summary', $tournament->id) : route('manage.tournaments.index') }}" class="inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">{{ $tournament ? 'Cancel' : 'Cancel' }}</a>
