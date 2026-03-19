@@ -43,7 +43,7 @@
                 <li>
                     @php
                         $isChallenge = ($tabKey === 'challenge-match');
-                        $navHref = $isChallenge ? route('challenge.index', $tournament->id) : route('tournaments.show', ['id' => $tournament->id, 'tab' => $tabKey]);
+                        $navHref = $isChallenge ? route('challenge.create', $tournament->id) : route('tournaments.show', ['id' => $tournament->id, 'tab' => $tabKey]);
                         $isActive = $isChallenge ? false : ($tab === $tabKey);
                     @endphp
                     <a href="{{ $navHref }}"

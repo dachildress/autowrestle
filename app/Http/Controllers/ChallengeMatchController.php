@@ -53,7 +53,7 @@ class ChallengeMatchController extends Controller
         ]);
     }
 
-    /** Step 1: select which of my wrestlers is challenging. */
+    /** Single-page challenge request: select your wrestler (dropdown), search and pick opponent (same division only). */
     public function create(Request $request, int $id): View|RedirectResponse
     {
         $tournament = Tournament::find($id);
@@ -74,60 +74,55 @@ class ChallengeMatchController extends Controller
             return redirect()->route('challenge.index', $id)->with('error', 'You have no wrestlers registered in this tournament.');
         }
 
+        $challengerTwId = (int) $request->query('challenger_tournament_wrestler_id');
+        $challengerTw = null;
+        $opponents = collect();
+
+        if ($challengerTwId > 0) {
+            $challengerTw = TournamentWrestler::where('id', $challengerTwId)
+                ->where('Tournament_id', $id)
+                ->whereIn('Wrestler_Id', $myWrestlerIds)
+                ->first();
+            if ($challengerTw) {
+                $search = trim((string) $request->query('q'));
+                $opponentsQuery = TournamentWrestler::where('Tournament_id', $id)
+                    ->where('id', '!=', $challengerTw->id)
+                    ->whereNotIn('Wrestler_Id', $myWrestlerIds);
+                if ($challengerTw->division_id !== null && $challengerTw->division_id !== '') {
+                    $opponentsQuery->where('division_id', $challengerTw->division_id);
+                } else {
+                    $opponentsQuery->whereNull('division_id');
+                }
+
+                if ($search !== '') {
+                    $opponentsQuery->where(function ($q) use ($search) {
+                        $q->where('wr_first_name', 'like', '%' . $search . '%')
+                            ->orWhere('wr_last_name', 'like', '%' . $search . '%');
+                    });
+                }
+                $opponents = $opponentsQuery->orderBy('wr_last_name')->orderBy('wr_first_name')->limit(100)->get();
+            }
+        }
+
+        $search = trim((string) $request->query('q', ''));
+
         return view('challenge.create', [
             'tournament' => $tournament,
             'myTournamentWrestlers' => $myTournamentWrestlers,
+            'challengerTw' => $challengerTw,
+            'opponents' => $opponents,
+            'search' => $search,
         ]);
     }
 
-    /** Step 2: search/select opponent (exclude my wrestlers). */
-    public function selectOpponent(Request $request, int $id): View|RedirectResponse
+    /** Legacy: redirect to single-page create with query params. */
+    public function selectOpponent(Request $request, int $id): RedirectResponse
     {
-        $tournament = Tournament::find($id);
-        if (! $tournament || ! $this->tournamentAllowsChallenge($tournament)) {
-            return redirect()->route('tournaments.show', $id)->with('error', 'Challenge matches are not available.');
-        }
-
-        $challengerTwId = (int) $request->query('challenger_tournament_wrestler_id');
-        $user = $request->user();
-        $myWrestlerIds = $user->wrestlers()->pluck('id');
-
-        $challengerTw = TournamentWrestler::where('id', $challengerTwId)
-            ->where('Tournament_id', $id)
-            ->whereIn('Wrestler_Id', $myWrestlerIds)
-            ->first();
-
-        if (! $challengerTw) {
-            return redirect()->route('challenge.create', $id)->with('error', 'Invalid wrestler selection.');
-        }
-
-        $divisionId = $request->query('division_id');
-        $search = trim((string) $request->query('q'));
-        $opponentsQuery = TournamentWrestler::where('Tournament_id', $id)
-            ->where('id', '!=', $challengerTwId)
-            ->whereNotIn('Wrestler_Id', $myWrestlerIds);
-
-        if ($divisionId !== null && $divisionId !== '') {
-            $opponentsQuery->where('division_id', (int) $divisionId);
-        }
-        if ($search !== '') {
-            $opponentsQuery->where(function ($q) use ($search) {
-                $q->where('wr_first_name', 'like', '%' . $search . '%')
-                    ->orWhere('wr_last_name', 'like', '%' . $search . '%');
-            });
-        }
-        $opponents = $opponentsQuery->orderBy('wr_last_name')->orderBy('wr_first_name')->limit(100)->get();
-
-        $divisions = $tournament->divisions()->orderBy('DivisionName')->get();
-
-        return view('challenge.select-opponent', [
-            'tournament' => $tournament,
-            'challengerTw' => $challengerTw,
-            'opponents' => $opponents,
-            'divisions' => $divisions,
-            'divisionId' => $divisionId,
-            'search' => $search,
+        $params = array_filter([
+            'challenger_tournament_wrestler_id' => $request->query('challenger_tournament_wrestler_id'),
+            'q' => $request->query('q'),
         ]);
+        return redirect()->route('challenge.create', array_merge([$id], $params));
     }
 
     /** Store new challenge request. */
@@ -159,7 +154,7 @@ class ChallengeMatchController extends Controller
             ->whereNotIn('Wrestler_Id', $myWrestlerIds)
             ->first();
         if (! $challengedTw) {
-            return redirect()->to(route('challenge.select-opponent', $id) . '?' . http_build_query(['challenger_tournament_wrestler_id' => $challengerTw->id]))->with('error', 'Invalid opponent.');
+            return redirect()->to(route('challenge.create', $id) . '?' . http_build_query(['challenger_tournament_wrestler_id' => $challengerTw->id]))->with('error', 'Invalid opponent.');
         }
 
         $challengedUserId = $challengedTw->getParentUserId();
@@ -191,7 +186,7 @@ class ChallengeMatchController extends Controller
         }
         $user->notify(new ChallengeRequestNotification($challenge, ChallengeRequestNotification::TYPE_CHALLENGE_SENT));
 
-        return redirect()->route('challenge.index', $id)->with('success', 'Challenge sent. The other parent will be notified.');
+        return redirect()->to(route('challenge.create', $id) . '?' . http_build_query(['challenger_tournament_wrestler_id' => $challengerTw->id]))->with('success', 'Your challenge has been requested.');
     }
 
     /** Show incoming challenge detail (for accept/decline). */
