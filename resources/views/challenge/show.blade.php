@@ -35,16 +35,16 @@
             </div>
         </div>
 
-        <div class="flex flex-wrap gap-3">
-            <form action="{{ route('challenge.accept', [$tournament->id, $challenge->id]) }}" method="post" class="inline">
+        <div class="flex flex-col sm:flex-row gap-3">
+            <form action="{{ route('challenge.accept', [$tournament->id, $challenge->id]) }}" method="post">
                 @csrf
-                <button type="submit" class="rounded-lg bg-emerald-600 px-5 py-2.5 text-base font-semibold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">Accept</button>
+                <button type="submit" class="w-full sm:w-auto rounded-lg bg-green-600 px-5 py-2.5 text-base font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">Accept</button>
             </form>
-            <form action="{{ route('challenge.decline', [$tournament->id, $challenge->id]) }}" method="post" class="inline">
+            <form action="{{ route('challenge.decline', [$tournament->id, $challenge->id]) }}" method="post">
                 @csrf
-                <button type="submit" class="rounded-lg bg-red-600 px-5 py-2.5 text-base font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Decline</button>
+                <button type="submit" class="w-full sm:w-auto rounded-lg bg-red-600 px-5 py-2.5 text-base font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Decline</button>
             </form>
-            <a href="{{ route('challenge.index', $tournament->id) }}" class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50">Cancel</a>
+            <a href="{{ route('challenge.index', $tournament->id) }}" class="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50">Cancel</a>
         </div>
     </x-card>
 </div>

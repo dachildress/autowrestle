@@ -9,6 +9,7 @@ use App\Models\Division;
 use App\Models\DivGroup;
 use App\Models\Tournament;
 use App\Models\TournamentWrestler;
+use App\Models\ChallengeRequest;
 use App\Models\Wrestler;
 use App\Services\BracketReportingService;
 use Illuminate\Http\Request;
@@ -74,7 +75,7 @@ class TournamentController extends Controller
         $tournament->load(['divisions', 'tournamentWrestlers.wrestler']);
 
         $tab = $request->query('tab', 'information');
-        $validTabs = ['information', 'my-wrestlers', 'brackets', 'teams', 'results'];
+        $validTabs = ['information', 'my-wrestlers', 'brackets', 'teams', 'results', 'challenge-matches'];
         if (! in_array($tab, $validTabs, true)) {
             $tab = 'information';
         }
@@ -135,6 +136,7 @@ class TournamentController extends Controller
         $resultsDivisionId = $request->query('results_division_id');
         $resultsTeam = $request->query('results_team');
         $teamsForResults = collect();
+        $challengeMatches = [];
         if ($tab === 'results') {
             $divisionIdFilter = $resultsDivisionId !== null && $resultsDivisionId !== '' ? (int) $resultsDivisionId : null;
             $summaries = $this->reporting->getCompletedBracketSummaries($id, $divisionIdFilter);
@@ -148,6 +150,122 @@ class TournamentController extends Controller
                     'bracket_id' => $s['bracket_id'],
                     'group_name' => $s['group_name'] ?? 'Bracket ' . $s['bracket_id'],
                     'placements' => $placements,
+                ];
+            }
+        }
+
+        if ($tab === 'challenge-matches') {
+            $crs = ChallengeRequest::where('tournament_id', $id)
+                ->where('status', ChallengeRequest::STATUS_SCHEDULED)
+                ->with(['challengerTournamentWrestler', 'challengedTournamentWrestler'])
+                ->orderByDesc('director_acted_at')
+                ->get();
+
+            foreach ($crs as $cr) {
+                $bout = Bout::where('id', $cr->bout_id)->where('Tournament_Id', $id)->first();
+                if (! $bout) {
+                    continue;
+                }
+
+                $state = BoutScoringState::where('tournament_id', $id)
+                    ->where('bout_id', $cr->bout_id)
+                    ->first();
+
+                $completed = $state && $state->status === 'completed';
+                $pin = (bool) ($bout->pin ?? false);
+                $wrtime = $bout->wrtime ?? null;
+
+                $challengerTwId = (int) ($cr->challengerTournamentWrestler->id ?? 0);
+                $challengedTwId = (int) ($cr->challengedTournamentWrestler->id ?? 0);
+
+                $challengerPoints = null;
+                $challengedPoints = null;
+                $challengerDisplay = '—';
+                $challengedDisplay = '—';
+                $pinWinnerSide = null; // 'challenger' | 'challenged' when pin completed
+
+                if ($completed && $state) {
+                    $redId = (int) ($state->red_wrestler_id ?? 0);
+                    $greenId = (int) ($state->green_wrestler_id ?? 0);
+                    $redScore = (int) ($state->red_score ?? 0);
+                    $greenScore = (int) ($state->green_score ?? 0);
+
+                    if ($challengerTwId === $redId) {
+                        $challengerPoints = $redScore;
+                        $challengedPoints = ($challengedTwId === $greenId) ? $greenScore : null;
+                    } elseif ($challengerTwId === $greenId) {
+                        $challengerPoints = $greenScore;
+                        $challengedPoints = ($challengedTwId === $redId) ? $redScore : null;
+                    } else {
+                        // Fallback: if mapping is unexpected, still show a total.
+                        $challengerPoints = $redId === $greenId ? $redScore : $redScore;
+                        $challengedPoints = $greenScore;
+                    }
+
+                    $winnerId = $state->winner_id;
+                    if (! $winnerId) {
+                        if ($redScore > $greenScore) {
+                            $winnerId = $redId;
+                        } elseif ($greenScore > $redScore) {
+                            $winnerId = $greenId;
+                        }
+                    }
+                    $winnerId = $winnerId ? (int) $winnerId : null;
+
+                    if ($pin) {
+                        // Winner is whichever side BoutScoringState says won.
+                        if ($winnerId && $winnerId === $challengerTwId) {
+                            $challengerDisplay = 'PIN' . ($wrtime ? ' ' . $wrtime : '');
+                            // For pins, only show pin/time for the winner (no loser points).
+                            $challengedDisplay = '—';
+                            $pinWinnerSide = 'challenger';
+                        } elseif ($winnerId && $winnerId === $challengedTwId) {
+                            $challengedDisplay = 'PIN' . ($wrtime ? ' ' . $wrtime : '');
+                            $challengerDisplay = '—';
+                            $pinWinnerSide = 'challenged';
+                        } else {
+                            $challengerDisplay = is_int($challengerPoints) ? (string) $challengerPoints : '—';
+                            $challengedDisplay = is_int($challengedPoints) ? (string) $challengedPoints : '—';
+                        }
+                    } else {
+                        $winnerScore = null;
+                        $loserScore = null;
+                        if ($winnerId && $winnerId === $redId) {
+                            $winnerScore = $redScore;
+                            $loserScore = $greenScore;
+                        } elseif ($winnerId && $winnerId === $greenId) {
+                            $winnerScore = $greenScore;
+                            $loserScore = $redScore;
+                        }
+
+                        $isMajor = $winnerScore !== null && $loserScore !== null && (abs($winnerScore - $loserScore) > 14);
+
+                        if ($winnerId && $winnerId === $challengerTwId) {
+                            $challengerDisplay = $isMajor ? ('Major ' . $winnerScore) : (string) $winnerScore;
+                            $challengedDisplay = is_int($challengedPoints) ? (string) $challengedPoints : ($loserScore !== null ? (string) $loserScore : '—');
+                        } elseif ($winnerId && $winnerId === $challengedTwId) {
+                            $challengedDisplay = $isMajor ? ('Major ' . $winnerScore) : (string) $winnerScore;
+                            $challengerDisplay = is_int($challengerPoints) ? (string) $challengerPoints : ($loserScore !== null ? (string) $loserScore : '—');
+                        } else {
+                            $challengerDisplay = is_int($challengerPoints) ? (string) $challengerPoints : '—';
+                            $challengedDisplay = is_int($challengedPoints) ? (string) $challengedPoints : '—';
+                        }
+                    }
+                }
+
+                $challengeMatches[] = (object) [
+                    'bout_id' => $cr->bout_id,
+                    'bout_number' => $bout->bout_number ?? $cr->bout_id,
+                    'challenger_name' => trim(($cr->challengerTournamentWrestler->wr_first_name ?? '') . ' ' . ($cr->challengerTournamentWrestler->wr_last_name ?? '')),
+                    'challenged_name' => trim(($cr->challengedTournamentWrestler->wr_first_name ?? '') . ' ' . ($cr->challengedTournamentWrestler->wr_last_name ?? '')),
+                    'challenger_club' => $cr->challengerTournamentWrestler->wr_club ?? '—',
+                    'challenged_club' => $cr->challengedTournamentWrestler->wr_club ?? '—',
+                    'mat_number' => (int) ($cr->mat_number ?? $bout->mat_number),
+                    'status_label' => $completed ? 'Completed' : 'Queued',
+                    'challenger_display' => $challengerDisplay,
+                    'challenged_display' => $challengedDisplay,
+                    'pin_winner_side' => $pinWinnerSide,
+                    'pin' => (bool) $pin,
                 ];
             }
         }
@@ -199,6 +317,7 @@ class TournamentController extends Controller
             'resultsDivisionId' => $resultsDivisionId,
             'resultsTeam' => $resultsTeam,
             'teamsForResults' => $teamsForResults,
+            'challengeMatches' => $challengeMatches,
             'bracketOptions' => $bracketOptions,
             'bracketOptionsByDivision' => $bracketOptionsByDivision,
             'selectedBracketsData' => $selectedBracketsData,

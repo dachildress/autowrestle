@@ -35,6 +35,9 @@
                     'teams' => 'Teams',
                     'results' => 'Results',
                 ];
+                if (($tournament->enable_challenge_matches ?? false)) {
+                    $navItems['challenge-matches'] = 'Challenge Matches';
+                }
                 if (($tournament->enable_challenge_matches ?? false) && auth()->check()) {
                     $navItems['challenge-match'] = 'Challenge Match';
                 }
@@ -43,7 +46,23 @@
                 <li>
                     @php
                         $isChallenge = ($tabKey === 'challenge-match');
-                        $navHref = $isChallenge ? route('challenge.create', $tournament->id) : route('tournaments.show', ['id' => $tournament->id, 'tab' => $tabKey]);
+                        $navHref = $isChallenge
+                            ? (function () use ($tournament) {
+                                $userId = auth()->id();
+                                $incomingQuery = \App\Models\ChallengeRequest::where('tournament_id', $tournament->id)
+                                    ->where('challenged_user_id', $userId)
+                                    ->where('status', \App\Models\ChallengeRequest::STATUS_PENDING_ACCEPTANCE);
+                                $incomingCount = (clone $incomingQuery)->count();
+                                if ($incomingCount > 0) {
+                                    if ($incomingCount === 1) {
+                                        $incomingId = (clone $incomingQuery)->orderByDesc('created_at')->value('id');
+                                        return route('challenge.show', [$tournament->id, $incomingId]);
+                                    }
+                                    return route('challenge.index', $tournament->id);
+                                }
+                                return route('challenge.create', $tournament->id);
+                            })()
+                            : route('tournaments.show', ['id' => $tournament->id, 'tab' => $tabKey]);
                         $isActive = $isChallenge ? false : ($tab === $tabKey);
                     @endphp
                     <a href="{{ $navHref }}"
@@ -647,6 +666,61 @@
                     }
                 })();
             </script>
+            @endif
+
+        @elseif($tab === 'challenge-matches')
+            <h2 class="mb-4 text-xl font-semibold text-slate-900">Challenge Matches</h2>
+
+            @if(empty($challengeMatches ?? []))
+                <p class="text-slate-600">No challenge matches have been scheduled yet.</p>
+            @else
+                <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-left text-slate-500">
+                                <th class="px-4 py-3 font-medium w-24">Bout</th>
+                                <th class="px-4 py-3 font-medium w-72">Challenger</th>
+                                <th class="px-4 py-3 font-medium w-72">Challenged</th>
+                                <th class="px-4 py-3 font-medium w-24">Mat</th>
+                                <th class="px-4 py-3 font-medium w-28">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($challengeMatches as $m)
+                                <tr class="border-b border-slate-100 last:border-b-0">
+                                    <td class="px-4 py-3 font-mono text-slate-700">#{{ $m->bout_number }}</td>
+                                    <td class="px-4 py-3">
+                                        @php $isPin = ($m->pin ?? false) === true; @endphp
+                                        @php $winnerSide = $m->pin_winner_side ?? null; @endphp
+                                        @php $highlightChallenger = $isPin && $winnerSide === 'challenger'; @endphp
+                                        <div class="rounded-lg border {{ $highlightChallenger ? 'border-blue-500' : 'border-slate-200' }} bg-white px-3 py-2">
+                                            <div class="font-semibold text-slate-900">{{ $m->challenger_name }}</div>
+                                            <div class="text-sm text-slate-500">{{ $m->challenger_club }}</div>
+                                            <div class="mt-1 font-mono text-slate-900">{{ $m->challenger_display }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        @php $isPin = ($m->pin ?? false) === true; @endphp
+                                        @php $winnerSide = $m->pin_winner_side ?? null; @endphp
+                                        @php $highlightChallenged = $isPin && $winnerSide === 'challenged'; @endphp
+                                        <div class="rounded-lg border {{ $highlightChallenged ? 'border-blue-500' : 'border-slate-200' }} bg-white px-3 py-2">
+                                            <div class="font-semibold text-slate-900">{{ $m->challenged_name }}</div>
+                                            <div class="text-sm text-slate-500">{{ $m->challenged_club }}</div>
+                                            <div class="mt-1 font-mono text-slate-900">{{ $m->challenged_display }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-700">Mat {{ $m->mat_number }}</td>
+                                    <td class="px-4 py-3">
+                                        @php $completed = ($m->status_label ?? '') === 'Completed'; @endphp
+                                        <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold {{ $completed ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' }}">
+                                            {{ $m->status_label ?? 'Queued' }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             @endif
 
         @elseif($tab === 'results')

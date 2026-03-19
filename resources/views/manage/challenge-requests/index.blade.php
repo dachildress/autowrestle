@@ -29,7 +29,7 @@
                                 <span class="font-semibold text-slate-900">{{ $req->challengedTournamentWrestler->wr_first_name }} {{ $req->challengedTournamentWrestler->wr_last_name }}</span>
                                 <span class="ml-2 text-sm text-slate-500">Accepted {{ $req->accepted_at?->diffForHumans() }}</span>
                             </div>
-                            <a href="{{ route('manage.challenge-requests.show', [$tournament->id, $req->id]) }}" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Review & approve</a>
+                            <a href="{{ route('manage.challenge-requests.show', [$tournament->id, $req->id]) }}" class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">Review & approve</a>
                         </li>
                     @endforeach
                 </ul>

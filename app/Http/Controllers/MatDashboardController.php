@@ -57,40 +57,91 @@ class MatDashboardController extends Controller
                 $boutIds = $boutRows->unique('id')->values();
 
                 foreach ($boutIds as $row) {
-                    $wrestlers = TournamentWrestler::select('tournamentwrestlers.id as wr_id', 'tournamentwrestlers.wr_first_name', 'tournamentwrestlers.wr_last_name', 'tournamentwrestlers.wr_weight', 'tournamentwrestlers.wr_club', 'brackets.wr_pos', 'bouts.round', 'bouts.completed', 'divisions.DivisionName')
-                        ->join('bouts', function ($j) use ($tid) {
-                            $j->on('tournamentwrestlers.id', '=', 'bouts.Wrestler_Id')
-                                ->where('bouts.Tournament_Id', '=', $tid);
-                        })
-                        ->join('brackets', function ($j) use ($tid) {
-                            $j->on('brackets.wr_Id', '=', 'bouts.Wrestler_Id')
-                                ->on('brackets.id', '=', 'bouts.Bracket_Id')
-                                ->where('brackets.Tournament_Id', '=', $tid);
-                        })
-                        ->leftJoin('divisions', 'bouts.Division_Id', '=', 'divisions.id')
-                        ->where('bouts.id', $row->id)
-                        ->where('bouts.Tournament_Id', $tid)
-                        ->orderBy('brackets.wr_pos')
-                        ->get();
-                    if ($wrestlers->count() >= 2) {
-                        $weightQuery = TournamentWrestler::select(DB::raw('MIN(tournamentwrestlers.wr_weight) as low, MAX(tournamentwrestlers.wr_weight) as high'))
+                    if ($row->challenge_request_id !== null) {
+                        // Challenge matches are not part of bracket generation (Bracket_Id = 0),
+                        // so we cannot join brackets here. Load wrestlers directly from bouts.
+                        $wrestlers = TournamentWrestler::select(
+                                'tournamentwrestlers.id as wr_id',
+                                'tournamentwrestlers.wr_first_name',
+                                'tournamentwrestlers.wr_last_name',
+                                'tournamentwrestlers.wr_weight',
+                                'tournamentwrestlers.wr_club',
+                                'bouts.round',
+                                'bouts.completed',
+                                'divisions.DivisionName'
+                            )
+                            ->join('bouts', function ($j) use ($tid) {
+                                $j->on('tournamentwrestlers.id', '=', 'bouts.Wrestler_Id')
+                                    ->where('bouts.Tournament_Id', '=', $tid);
+                            })
+                            ->leftJoin('divisions', 'bouts.Division_Id', '=', 'divisions.id')
+                            ->where('bouts.id', $row->id)
+                            ->where('bouts.Tournament_Id', $tid)
+                            ->orderBy('bouts.Wrestler_Id')
+                            ->get();
+
+                        if ($wrestlers->count() >= 2) {
+                            $low = $wrestlers->min('wr_weight');
+                            $high = $wrestlers->max('wr_weight');
+                            $bouts[] = (object) [
+                                'id' => $row->id,
+                                'bout_number' => $row->bout_number,
+                                'round' => $wrestlers[0]->round,
+                                'division_name' => $wrestlers[0]->DivisionName ?? '–',
+                                'wr1' => $wrestlers[0],
+                                'wr2' => $wrestlers[1],
+                                'weight' => ($low !== null && $high !== null) ? ($low . ' - ' . $high) : '–',
+                                'completed' => (bool) $wrestlers[0]->completed,
+                            ];
+                        }
+                    } else {
+                        // Standard bracket bouts.
+                        $wrestlers = TournamentWrestler::select(
+                                'tournamentwrestlers.id as wr_id',
+                                'tournamentwrestlers.wr_first_name',
+                                'tournamentwrestlers.wr_last_name',
+                                'tournamentwrestlers.wr_weight',
+                                'tournamentwrestlers.wr_club',
+                                'brackets.wr_pos',
+                                'bouts.round',
+                                'bouts.completed',
+                                'divisions.DivisionName'
+                            )
+                            ->join('bouts', function ($j) use ($tid) {
+                                $j->on('tournamentwrestlers.id', '=', 'bouts.Wrestler_Id')
+                                    ->where('bouts.Tournament_Id', '=', $tid);
+                            })
                             ->join('brackets', function ($j) use ($tid) {
-                                $j->on('tournamentwrestlers.id', '=', 'brackets.wr_Id')
+                                $j->on('brackets.wr_Id', '=', 'bouts.Wrestler_Id')
+                                    ->on('brackets.id', '=', 'bouts.Bracket_Id')
                                     ->where('brackets.Tournament_Id', '=', $tid);
                             })
-                            ->where('brackets.id', $row->Bracket_Id)
-                            ->where('tournamentwrestlers.Tournament_id', $tid)
-                            ->first();
-                        $bouts[] = (object) [
-                            'id' => $row->id,
-                            'bout_number' => $row->bout_number,
-                            'round' => $wrestlers[0]->round,
-                            'division_name' => $wrestlers[0]->DivisionName ?? '–',
-                            'wr1' => $wrestlers[0],
-                            'wr2' => $wrestlers[1],
-                            'weight' => $weightQuery ? ($weightQuery->low . ' - ' . $weightQuery->high) : '–',
-                            'completed' => (bool) $wrestlers[0]->completed,
-                        ];
+                            ->leftJoin('divisions', 'bouts.Division_Id', '=', 'divisions.id')
+                            ->where('bouts.id', $row->id)
+                            ->where('bouts.Tournament_Id', $tid)
+                            ->orderBy('brackets.wr_pos')
+                            ->get();
+
+                        if ($wrestlers->count() >= 2) {
+                            $weightQuery = TournamentWrestler::select(DB::raw('MIN(tournamentwrestlers.wr_weight) as low, MAX(tournamentwrestlers.wr_weight) as high'))
+                                ->join('brackets', function ($j) use ($tid) {
+                                    $j->on('tournamentwrestlers.id', '=', 'brackets.wr_Id')
+                                        ->where('brackets.Tournament_Id', '=', $tid);
+                                })
+                                ->where('brackets.id', $row->Bracket_Id)
+                                ->where('tournamentwrestlers.Tournament_id', $tid)
+                                ->first();
+                            $bouts[] = (object) [
+                                'id' => $row->id,
+                                'bout_number' => $row->bout_number,
+                                'round' => $wrestlers[0]->round,
+                                'division_name' => $wrestlers[0]->DivisionName ?? '–',
+                                'wr1' => $wrestlers[0],
+                                'wr2' => $wrestlers[1],
+                                'weight' => $weightQuery ? ($weightQuery->low . ' - ' . $weightQuery->high) : '–',
+                                'completed' => (bool) $wrestlers[0]->completed,
+                            ];
+                        }
                     }
                 }
 

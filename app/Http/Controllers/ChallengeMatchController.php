@@ -45,6 +45,12 @@ class ChallengeMatchController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
+        // If there's only one pending challenge for this parent, take them directly to approve/decline.
+        if ($incoming->count() === 1) {
+            $only = $incoming->first();
+            return redirect()->route('challenge.show', [$id, $only->id]);
+        }
+
         return view('challenge.index', [
             'tournament' => $tournament,
             'myTournamentWrestlers' => $myTournamentWrestlers,

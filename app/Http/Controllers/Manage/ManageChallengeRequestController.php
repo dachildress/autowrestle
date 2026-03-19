@@ -116,6 +116,7 @@ class ManageChallengeRequestController extends Controller
         Bout::insert([
             [
                 'id' => $newBoutId,
+                'bout_number' => $newBoutId,
                 'Wrestler_Id' => $challengerTw->id,
                 'Bracket_Id' => 0,
                 'mat_number' => $matNumber,
@@ -128,6 +129,7 @@ class ManageChallengeRequestController extends Controller
             ],
             [
                 'id' => $newBoutId,
+                'bout_number' => $newBoutId,
                 'Wrestler_Id' => $challengedTw->id,
                 'Bracket_Id' => 0,
                 'mat_number' => $matNumber,

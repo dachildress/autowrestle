@@ -38,7 +38,7 @@
                         <input type="search" name="q" id="q" value="{{ old('q', $search) }}" placeholder="Search wrestlers..."
                                class="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[44px]">
                     </div>
-                    <button type="submit" class="shrink-0 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:min-w-[100px]">Search</button>
+                    <x-button type="submit" variant="primary" class="shrink-0 sm:min-w-[100px] justify-center">Search</x-button>
                 </div>
             </div>
         </form>
@@ -64,7 +64,7 @@
                                     @csrf
                                     <input type="hidden" name="challenger_tournament_wrestler_id" value="{{ $challengerTw->id }}">
                                     <input type="hidden" name="challenged_tournament_wrestler_id" value="{{ $tw->id }}">
-                                    <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Challenge</button>
+                                    <x-button type="submit" variant="primary" class="rounded-lg">Challenge</x-button>
                                 </form>
                             </li>
                         @endforeach

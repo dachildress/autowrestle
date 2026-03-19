@@ -70,7 +70,7 @@
                             @endforeach
                         </select>
                     </label>
-                    <button type="submit" class="rounded-lg bg-emerald-600 px-5 py-2.5 text-base font-semibold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">Approve & schedule</button>
+                    <button type="submit" class="rounded-lg bg-green-600 px-5 py-2.5 text-base font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">Approve & schedule</button>
                 </form>
                 <form action="{{ route('manage.challenge-requests.decline', [$tournament->id, $challenge->id]) }}" method="post" class="inline">
                     @csrf
