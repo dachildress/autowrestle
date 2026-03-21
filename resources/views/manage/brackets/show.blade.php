@@ -33,6 +33,11 @@
 
 @if($bouted)
     <p><strong>Brackets are locked.</strong> To make changes you must un-bout this division.</p>
+@else
+    <p class="text-slate-700 text-sm max-w-3xl mb-3">
+        <strong>Bouting limit:</strong> Each bracket can have at most <strong>{{ $maxWrestlersPerBracketForBouting }}</strong> wrestlers for automatic bouting
+        (pairings in bout settings). Dragging a wrestler into a bracket that already has {{ $maxWrestlersPerBracketForBouting }} will be blocked.
+    </p>
 @endif
 
 @if(!$bouted)
@@ -41,7 +46,7 @@
     <input type="hidden" name="target_bracket_id" id="bracket-drop-target-id" value="">
 </form>
 @endif
-<table id="brackets-table" data-move-url-base="{{ url('tournaments/manage/'.$tournament->id.'/movewrestler') }}" data-tid="{{ $tournament->id }}">
+<table id="brackets-table" data-move-url-base="{{ url('tournaments/manage/'.$tournament->id.'/movewrestler') }}" data-tid="{{ $tournament->id }}" data-max-wrestlers-per-bracket="{{ (int) $maxWrestlersPerBracketForBouting }}">
     <thead>
         <tr class="nodrop nodrag">
             <th>Bracket</th>
@@ -114,7 +119,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/TableDnD/1.0.5/jquery.tablednd.min.js"></script>
 <script>
 (function() {
-    var moveUrlBase = document.getElementById('brackets-table').getAttribute('data-move-url-base');
+    var tableEl = document.getElementById('brackets-table');
+    var moveUrlBase = tableEl && tableEl.getAttribute('data-move-url-base');
+    var maxPerBracket = tableEl ? parseInt(tableEl.getAttribute('data-max-wrestlers-per-bracket'), 10) : 6;
+    if (!maxPerBracket || maxPerBracket < 1) maxPerBracket = 6;
     var dropForm = document.getElementById('bracket-drop-move-form');
     var targetInput = document.getElementById('bracket-drop-target-id');
     if (!moveUrlBase || !dropForm || !targetInput) return;
@@ -143,6 +151,19 @@
                 if (!targetBracketId) return;
                 var currentBracket = row.getAttribute('data-bracket-id');
                 if (targetBracketId === currentBracket) return;
+
+                var countInTarget = 0;
+                for (var j = 0; j < rows.length; j++) {
+                    var r = rows[j];
+                    if (!r.classList || !r.classList.contains('bracket-row')) continue;
+                    if (String(r.getAttribute('data-bracket-id')) === String(targetBracketId)) countInTarget++;
+                }
+                if (countInTarget >= maxPerBracket) {
+                    alert('This bracket already has ' + maxPerBracket + ' wrestlers—the maximum supported for automatic bouting (bout settings). Remove a wrestler from that bracket before adding another. The page will refresh to undo this move.');
+                    window.location.reload();
+                    return;
+                }
+
                 try {
                     sessionStorage.setItem('bracketScrollX', String(window.scrollX));
                     sessionStorage.setItem('bracketScrollY', String(window.scrollY));

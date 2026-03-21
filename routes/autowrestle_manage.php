@@ -61,6 +61,7 @@ Route::middleware(['auth'])->prefix('tournaments/manage')->name('manage.')->grou
 
         Route::get('bracket/{did}', [\App\Http\Controllers\Manage\ManageBracketController::class, 'create'])->name('brackets.create')->where('did', '[0-9]+');
         Route::get('bracket/show/{did}/{gid}', [\App\Http\Controllers\Manage\ManageBracketController::class, 'show'])->name('brackets.show')->where(['did' => '[0-9]+', 'gid' => '[0-9]+']);
+        Route::get('bracket/print/{did}', [\App\Http\Controllers\Manage\ManageBracketController::class, 'printBrackets'])->name('brackets.print')->where('did', '[0-9]+');
         Route::get('unbracket/{did}', [\App\Http\Controllers\Manage\ManageBracketController::class, 'unbracket'])->name('brackets.unbracket')->where('did', '[0-9]+');
         Route::get('deletewrestler/{wid}', [\App\Http\Controllers\Manage\ManageBracketController::class, 'deleteWrestler'])->name('brackets.deleteWrestler')->where('wid', '[0-9]+');
         Route::get('movewrestler/{wid}', [\App\Http\Controllers\Manage\ManageBracketController::class, 'moveWrestlerForm'])->name('brackets.moveWrestlerForm')->where('wid', '[0-9]+');

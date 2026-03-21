@@ -34,8 +34,10 @@ class ManageBoutController extends Controller
     }
 
     /**
-     * Create bouts for a division using a number scheme. If no scheme applies, redirect with error.
-     * Optional query: scheme_id to use a specific scheme; otherwise the first applicable scheme is used.
+     * Create bouts for a division using bout number schemes that apply to that division.
+     *
+     * By default, runs every applicable scheme in order (name, id): each scheme defines its own
+     * mats, groups, rounds, and bout numbering start. Optional query scheme_id runs only that scheme.
      * When requested as AJAX (Accept: application/json), returns JSON and does not redirect.
      */
     public function create(Request $request, int $tid, int $did): RedirectResponse|JsonResponse
@@ -55,24 +57,38 @@ class ManageBoutController extends Controller
                 }
                 return redirect()->route('manage.tournaments.show', $tid)->with('error', $message);
             }
+            $schemeService->runSingleSchemeForDivision($tid, $did, $scheme);
+            $schemesUsed = collect([$scheme]);
         } else {
-            $scheme = $schemeService->getPreferredSchemeForDivision($tid, $did);
-            if (! $scheme) {
+            $schemesUsed = $schemeService->applicableSchemesForDivision($tid, $did);
+            if ($schemesUsed->isEmpty()) {
                 $message = 'No number scheme applies to ' . $division->DivisionName . '. Add a scheme under Number Schemes first.';
                 if ($wantsJson) {
                     return response()->json(['success' => false, 'message' => $message], 422);
                 }
                 return redirect()->route('manage.tournaments.show', $tid)->with('error', $message);
             }
+            $schemeService->runAllSchemesForDivision($tid, $did);
         }
 
-        $schemeService->runSchemeForDivision($tid, $did, $scheme->id);
+        $schemeNames = $schemesUsed->pluck('scheme_name')->implode(', ');
 
         if ($wantsJson) {
-            return response()->json(['success' => true, 'division_name' => $division->DivisionName]);
+            return response()->json([
+                'success' => true,
+                'division_name' => $division->DivisionName,
+                'schemes_used' => $schemesUsed->map(fn (BoutNumberScheme $s) => [
+                    'id' => $s->id,
+                    'name' => $s->scheme_name,
+                ])->values()->all(),
+            ]);
         }
+
+        $count = $schemesUsed->count();
+
         return redirect()->route('manage.tournaments.show', $tid)
-            ->with('success', 'Bouts created for ' . $division->DivisionName . ' using scheme "' . $scheme->scheme_name . '".');
+            ->with('success', 'Bouts created for ' . $division->DivisionName . ' using '
+                . $count . ' number scheme' . ($count === 1 ? '' : 's') . ': ' . $schemeNames . '.');
     }
 
     /**
@@ -100,71 +116,177 @@ class ManageBoutController extends Controller
         $tournament = $this->authorizeTournament($request, $tid);
         $division = Division::where('id', $did)->where('Tournament_Id', $tid)->firstOrFail();
 
-        $query = Bout::where('Division_Id', $did)
+        $schemeService = app(BoutNumberSchemeService::class);
+        /** @var list<int> $printMats informational: scheme + division span + mats on bouts (never used to exclude rows) */
+        $printMats = $schemeService->resolvePrintMatsForDivision($tid, $did);
+
+        // Two DB rows per logical bout (same id, different Wrestler_Id).
+        // Do not filter by mat_number: tournament_mats / all_mats often resolves to only mat 1 and would
+        // hide mats 2–3. Include every bout for this division, then sort round → mat → bout #.
+        // Do NOT filter by Division_Id when loading both rows later: mismatched Division_Id on one row
+        // would otherwise drop the whole bout.
+        $idsFromBoutColumn = DB::table('bouts')
             ->where('Tournament_Id', $tid)
-            ->orderBy('round')
-            ->orderBy('id');
+            ->where('Division_Id', $did)
+            ->when($rid !== 0, fn ($q) => $q->where('round', $rid))
+            ->distinct()
+            ->pluck('id');
 
-        if ($rid !== 0) {
-            $query->where('round', $rid);
-        }
+        $idsFromWrestlers = DB::table('bouts as b')
+            ->join('tournamentwrestlers as tw', function ($join) use ($tid) {
+                $join->on('tw.id', '=', 'b.Wrestler_Id')
+                    ->where('tw.Tournament_id', '=', $tid);
+            })
+            ->where('b.Tournament_Id', $tid)
+            ->where('tw.division_id', $did)
+            ->when($rid !== 0, fn ($q) => $q->where('b.round', $rid))
+            ->distinct()
+            ->pluck('b.id');
 
-        $boutIds = $query->get()->unique('id')->values();
+        $boutIds = $idsFromBoutColumn->merge($idsFromWrestlers)->unique()->sort()->values();
 
         $bouts = [];
-        foreach ($boutIds as $row) {
-            $wrestlers = TournamentWrestler::select('tournamentwrestlers.id as wr_id', 'tournamentwrestlers.wr_first_name', 'tournamentwrestlers.wr_last_name', 'tournamentwrestlers.wr_weight', 'tournamentwrestlers.wr_club', 'brackets.wr_pos', 'bouts.round')
-                ->join('bouts', function ($j) use ($tid) {
-                    $j->on('tournamentwrestlers.id', '=', 'bouts.Wrestler_Id')
-                        ->where('bouts.Tournament_Id', '=', $tid);
-                })
-                ->join('brackets', function ($j) use ($tid) {
-                    $j->on('brackets.wr_Id', '=', 'bouts.Wrestler_Id')
-                        ->on('brackets.id', '=', 'bouts.Bracket_Id')
-                        ->where('brackets.Tournament_Id', '=', $tid);
-                })
-                ->where('bouts.id', $row->id)
-                ->where('bouts.Tournament_Id', $tid)
-                ->orderBy('brackets.wr_pos')
+        foreach ($boutIds as $boutId) {
+            $boutId = (int) $boutId;
+
+            $boutRows = DB::table('bouts')
+                ->where('Tournament_Id', $tid)
+                ->where('id', $boutId)
+                ->orderBy('Wrestler_Id')
                 ->get();
 
-            if ($wrestlers->count() >= 2) {
-                $weightQuery = TournamentWrestler::select(DB::raw('MIN(tournamentwrestlers.wr_weight) as low, MAX(tournamentwrestlers.wr_weight) as high'))
-                    ->join('brackets', function ($j) use ($tid) {
-                        $j->on('tournamentwrestlers.id', '=', 'brackets.wr_Id')
-                            ->where('brackets.Tournament_Id', '=', $tid);
-                    })
-                    ->where('brackets.id', $row->Bracket_Id)
-                    ->where('tournamentwrestlers.Tournament_id', $tid)
-                    ->first();
-
-                $bouts[] = (object) [
-                    'id' => $row->id,
-                    'bout_number' => $row->bout_number,
-                    'round' => $wrestlers[0]->round,
-                    'mat_number' => $row->mat_number,
-                    'wr1' => $wrestlers[0],
-                    'wr2' => $wrestlers[1],
-                    'weight' => $weightQuery ? ($weightQuery->low . ' - ' . $weightQuery->high) : '–',
-                ];
+            if ($boutRows->count() < 2) {
+                continue;
             }
+
+            $wrIds = $boutRows->pluck('Wrestler_Id')->map(fn ($x) => (int) $x)->unique()->values()->all();
+            if (count($wrIds) < 2) {
+                continue;
+            }
+
+            $tws = TournamentWrestler::query()
+                ->whereIn('id', $wrIds)
+                ->where('Tournament_id', $tid)
+                ->get()
+                ->keyBy(fn (TournamentWrestler $tw) => (int) $tw->id);
+
+            if ($tws->count() < 2) {
+                continue;
+            }
+
+            // Division print: both competitors must belong to this division (handles bad bout.Division_Id on one row).
+            $bothInDivision = $tws->every(fn (TournamentWrestler $tw) => (int) $tw->division_id === $did);
+            if (! $bothInDivision) {
+                continue;
+            }
+
+            $firstRow = $boutRows->first();
+            $bracketId = (int) $firstRow->Bracket_Id;
+            $matNumber = (int) ($boutRows->max('mat_number') ?? 0);
+
+            $round = (int) ($boutRows->max('round') ?? 0);
+            $boutNumber = $boutRows->pluck('bout_number')->filter(fn ($n) => $n !== null && $n !== '')->max();
+
+            $positions = Bracket::query()
+                ->where('Tournament_Id', $tid)
+                ->where('id', $bracketId)
+                ->whereIn('wr_Id', $wrIds)
+                ->get()
+                ->keyBy(fn (Bracket $br) => (int) $br->wr_Id);
+
+            $ordered = collect($wrIds)
+                ->map(function (int $wid) use ($tws, $positions) {
+                    $tw = $tws->get($wid);
+                    if ($tw === null) {
+                        return null;
+                    }
+                    $br = $positions->get($wid);
+
+                    return (object) [
+                        'wr_id' => $tw->id,
+                        'wr_first_name' => $tw->wr_first_name,
+                        'wr_last_name' => $tw->wr_last_name,
+                        'wr_weight' => $tw->wr_weight,
+                        'wr_club' => $tw->wr_club,
+                        // Missing bracket row: still print; sort after real positions, then by id
+                        'wr_pos' => $br !== null ? (int) $br->wr_pos : 99,
+                    ];
+                })
+                ->filter()
+                ->sort(function ($a, $b) {
+                    $pa = (int) $a->wr_pos;
+                    $pb = (int) $b->wr_pos;
+                    if ($pa !== $pb) {
+                        return $pa <=> $pb;
+                    }
+
+                    return ((int) $a->wr_id) <=> ((int) $b->wr_id);
+                })
+                ->values();
+
+            if ($ordered->count() < 2) {
+                continue;
+            }
+
+            $weightQuery = TournamentWrestler::select(DB::raw('MIN(tournamentwrestlers.wr_weight) as low, MAX(tournamentwrestlers.wr_weight) as high'))
+                ->join('brackets', function ($j) use ($tid) {
+                    $j->on('tournamentwrestlers.id', '=', 'brackets.wr_Id')
+                        ->where('brackets.Tournament_Id', '=', $tid);
+                })
+                ->where('brackets.id', $bracketId)
+                ->where('tournamentwrestlers.Tournament_id', $tid)
+                ->first();
+
+            $weightLabel = '–';
+            if ($weightQuery && $weightQuery->low !== null && $weightQuery->high !== null) {
+                $weightLabel = $weightQuery->low . ' - ' . $weightQuery->high;
+            } else {
+                $w1 = $ordered[0]->wr_weight;
+                $w2 = $ordered[1]->wr_weight;
+                if ($w1 !== null && $w2 !== null) {
+                    $weightLabel = min((float) $w1, (float) $w2) . ' - ' . max((float) $w1, (float) $w2);
+                }
+            }
+
+            $bouts[] = (object) [
+                'id' => $boutId,
+                'bout_number' => $boutNumber,
+                'round' => $round,
+                'mat_number' => $matNumber,
+                'wr1' => $ordered[0],
+                'wr2' => $ordered[1],
+                'weight' => $weightLabel,
+            ];
         }
 
+        // Sheets order: round ascending, then mat (numeric), then bout_number (scheme order), then id.
         usort($bouts, function ($a, $b) {
+            $roundCmp = (int) $a->round <=> (int) $b->round;
+            if ($roundCmp !== 0) {
+                return $roundCmp;
+            }
+            $matCmp = (int) $a->mat_number <=> (int) $b->mat_number;
+            if ($matCmp !== 0) {
+                return $matCmp;
+            }
             $an = $a->bout_number ?? $a->id;
             $bn = $b->bout_number ?? $b->id;
             if (is_numeric($an) && is_numeric($bn)) {
                 return (int) $an <=> (int) $bn;
             }
-            $roundCmp = (int) $a->round <=> (int) $b->round;
-            return $roundCmp !== 0 ? $roundCmp : $a->id <=> $b->id;
+
+            return $a->id <=> $b->id;
         });
+
+        $matsOnSheets = collect($bouts)->pluck('mat_number')->unique()->sort()->values()->all();
 
         return view('manage.bouts.print', [
             'tournament' => $tournament,
             'division' => $division,
             'bouts' => $bouts,
             'round' => $rid,
+            'print_mats' => $printMats,
+            'mats_on_sheets' => $matsOnSheets,
         ]);
     }
 

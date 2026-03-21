@@ -14,7 +14,8 @@
         .top-box:first-of-type { flex: 1.4; }
         .top-box:nth-of-type(2) { flex: 1; }
         .top-box:nth-of-type(3) { flex: 0.5; }
-        .top-box:nth-of-type(4) { flex: 0.7; }
+        .top-box:nth-of-type(4) { flex: 0.45; }
+        .top-box:nth-of-type(5) { flex: 0.45; }
 
         .sheet-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         .sheet-table th, .sheet-table td { border: 1px solid #9a3412; padding: 2px 4px; vertical-align: middle; }
@@ -63,6 +64,15 @@
     <p class="no-print"><a href="{{ route('manage.bouts.selectPrint', $tournament->id) }}">← Back to print selection</a></p>
     <h1 class="no-print">Bout sheets – {{ $division->DivisionName }}</h1>
     <p class="no-print">{{ $tournament->TournamentName }} — {{ $round ? "Round {$round}" : 'All rounds' }}</p>
+    <p class="no-print text-slate-600" style="font-size:11px;">
+        Order: round → mat → bout #.
+        @if(!empty($mats_on_sheets))
+            <strong>On this print:</strong> mats {{ implode(', ', $mats_on_sheets) }} ({{ count($bouts) }} bout{{ count($bouts) !== 1 ? 's' : '' }}).
+        @endif
+        @if(!empty($print_mats))
+            <span class="text-slate-500">Reference mat list (scheme + division + DB): {{ implode(', ', $print_mats) }}.</span>
+        @endif
+    </p>
 
     @php $posLabel = function($p) { return ['A','B','C','D','E','F'][$p] ?? (string)$p; }; @endphp
     @php $boutChunks = is_array($bouts) ? array_chunk($bouts, 2) : $bouts->chunk(2)->values()->all(); @endphp
@@ -75,6 +85,7 @@
                 <div class="top-box bord">DIVISION: {{ $division->DivisionName }}</div>
                 <div class="top-box bord">WEIGHT: {{ $b->weight }}</div>
                 <div class="top-box bord">ROUND: {{ $b->round }}</div>
+                <div class="top-box bord">MAT: {{ $b->mat_number ?? '—' }}</div>
                 <div class="top-box bord">Match: {{ $b->bout_number ?? $b->id }}</div>
             </div>
 

@@ -60,9 +60,9 @@ class TournamentSetupService
     private function createPwGroups(int $tid, int $divisionId): void
     {
         $groups = [
-            ['Name' => 'Grades P - 1', 'MinAge' => 3, 'MaxAge' => 7, 'MinGrade' => -1, 'MaxGrade' => 1, 'MaxWeightDiff' => 7, 'MaxPwrDiff' => 0, 'MaxExpDiff' => 1],
-            ['Name' => 'Grades 2 - 3', 'MinAge' => 7, 'MaxAge' => 9, 'MinGrade' => 2, 'MaxGrade' => 3, 'MaxWeightDiff' => 7, 'MaxPwrDiff' => 0, 'MaxExpDiff' => 2],
-            ['Name' => 'Grades 4 - 5', 'MinAge' => 9, 'MaxAge' => 11, 'MinGrade' => 4, 'MaxGrade' => 5, 'MaxWeightDiff' => 8, 'MaxPwrDiff' => 0, 'MaxExpDiff' => 3],
+            ['Name' => 'Grades P - 1', 'gender' => 'coed', 'MinAge' => 3, 'MaxAge' => 7, 'MinGrade' => -1, 'MaxGrade' => 1, 'MaxWeightDiff' => 7, 'MaxPwrDiff' => 0, 'MaxExpDiff' => 1],
+            ['Name' => 'Grades 2 - 3', 'gender' => 'coed', 'MinAge' => 7, 'MaxAge' => 9, 'MinGrade' => 2, 'MaxGrade' => 3, 'MaxWeightDiff' => 7, 'MaxPwrDiff' => 0, 'MaxExpDiff' => 2],
+            ['Name' => 'Grades 4 - 5', 'gender' => 'coed', 'MinAge' => 9, 'MaxAge' => 11, 'MinGrade' => 4, 'MaxGrade' => 5, 'MaxWeightDiff' => 8, 'MaxPwrDiff' => 0, 'MaxExpDiff' => 3],
         ];
         $this->createGroupsForDivision($tid, $divisionId, $groups, '4');
     }
@@ -71,7 +71,7 @@ class TournamentSetupService
     private function createJrGroups(int $tid, int $divisionId): void
     {
         $groups = [
-            ['Name' => 'Grades 6 - 8', 'MinAge' => 11, 'MaxAge' => 15, 'MinGrade' => 6, 'MaxGrade' => 8, 'MaxWeightDiff' => 8, 'MaxPwrDiff' => 2, 'MaxExpDiff' => 3],
+            ['Name' => 'Grades 6 - 8', 'gender' => 'coed', 'MinAge' => 11, 'MaxAge' => 15, 'MinGrade' => 6, 'MaxGrade' => 8, 'MaxWeightDiff' => 8, 'MaxPwrDiff' => 2, 'MaxExpDiff' => 3],
         ];
         $this->createGroupsForDivision($tid, $divisionId, $groups, '5');
     }

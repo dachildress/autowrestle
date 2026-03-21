@@ -117,10 +117,10 @@
                             <ul class="nav-dropdown-menu">
                                 @foreach($tournament->divisions as $d)
                                     <li>
-                                        @if($d->bouted)
-                                            <a href="{{ route('manage.brackets.show', [$tournament->id, $d->id, $d->divGroups->first()?->id]) }}" target="_blank">{{ $d->DivisionName }}</a>
+                                        @if($d->Bracketed)
+                                            <a href="{{ route('manage.brackets.print', [$tournament->id, $d->id]) }}" target="_blank">{{ $d->DivisionName }}</a>
                                         @else
-                                            <a href="#" class="nav-link-disabled" onclick="return false;">{{ $d->DivisionName }} – Not bouted</a>
+                                            <a href="#" class="nav-link-disabled" onclick="return false;">{{ $d->DivisionName }} – Not bracketed</a>
                                         @endif
                                     </li>
                                 @endforeach
@@ -188,9 +188,13 @@
                             <a href="#">Print Brackets</a>
                             <ul class="nav-dropdown-menu">
                                 @foreach($tournament->divisions as $d)
-                                    @if($d->bouted)
-                                        <li><a href="{{ route('manage.brackets.show', [$tournament->id, $d->id, $d->divGroups->first()?->id]) }}" target="_blank">{{ $d->DivisionName }}</a></li>
-                                    @endif
+                                    <li>
+                                        @if($d->Bracketed)
+                                            <a href="{{ route('manage.brackets.print', [$tournament->id, $d->id]) }}" target="_blank">{{ $d->DivisionName }}</a>
+                                        @else
+                                            <span class="nav-link-disabled">{{ $d->DivisionName }} – Not bracketed</span>
+                                        @endif
+                                    </li>
                                 @endforeach
                             </ul>
                         </li>

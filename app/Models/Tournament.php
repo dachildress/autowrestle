@@ -129,9 +129,15 @@ class Tournament extends Model
      */
     public function getConfiguredMatNumbers(): array
     {
-        $defined = $this->tournamentMats()->pluck('mat_number')->all();
+        $defined = $this->tournamentMats()
+            ->orderBy('mat_number')
+            ->pluck('mat_number')
+            ->map(fn ($m) => (int) $m)
+            ->unique()
+            ->values()
+            ->all();
         if (! empty($defined)) {
-            return array_values($defined);
+            return $defined;
         }
         $this->load('divisions');
         $mats = [];

@@ -11,6 +11,7 @@ use App\Models\Tournament;
 use App\Models\TournamentWrestler;
 use App\Models\Wrestler;
 use App\Services\BracketGenerationService;
+use App\Services\BracketPrintService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,12 @@ use Illuminate\View\View;
 
 class ManageBracketController extends Controller
 {
+    /**
+     * Seeded boutsettings only define pairings for bracket sizes 2–6 ({@see BoutSettingsSeeder}).
+     * Drag-and-drop and {@see moveWrestler} enforce this so operators are not surprised when bouting creates no bouts.
+     */
+    public const MAX_WRESTLERS_PER_BRACKET_FOR_BOUTING = 6;
+
     private function authorizeTournament(Request $request, int $tid): Tournament
     {
         $tournament = Tournament::findOrFail($tid);
@@ -98,6 +105,31 @@ class ManageBracketController extends Controller
             'bracketCounts' => $bracketCounts,
             'perBracket' => $perBracket,
             'bouted' => (bool) $group->bouted,
+            'maxWrestlersPerBracketForBouting' => self::MAX_WRESTLERS_PER_BRACKET_FOR_BOUTING,
+        ]);
+    }
+
+    /**
+     * Printable round-robin bracket sheets for a division (all brackets in bracket id order).
+     */
+    public function printBrackets(Request $request, int $tid, int $did): View
+    {
+        $tournament = $this->authorizeTournament($request, $tid);
+        $division = Division::where('id', $did)->where('Tournament_Id', $tid)->firstOrFail();
+        if (! (bool) $division->Bracketed) {
+            abort(404, 'This division is not bracketed yet.');
+        }
+
+        $sheets = app(BracketPrintService::class)->buildDivisionSheets(
+            $tid,
+            $did,
+            (bool) $division->bouted
+        );
+
+        return view('manage.brackets.print', [
+            'tournament' => $tournament,
+            'division' => $division,
+            'sheets' => $sheets,
         ]);
     }
 
@@ -177,6 +209,19 @@ class ManageBracketController extends Controller
             return redirect()->back()->with('error', 'Target bracket is not in this division.');
         }
 
+        $wrestlersInTarget = (int) Bracket::where('id', $targetBracketId)->where('Tournament_Id', $tid)->count();
+        if ($wrestlersInTarget >= self::MAX_WRESTLERS_PER_BRACKET_FOR_BOUTING) {
+            $message = 'That bracket already has the maximum supported for automatic bouting ('
+                . self::MAX_WRESTLERS_PER_BRACKET_FOR_BOUTING
+                . ' wrestlers). Remove a wrestler before adding another.';
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['ok' => false, 'message' => $message], 422);
+            }
+
+            return redirect()->back()->with('error', $message);
+        }
+
         Bracket::where('id', $currentBracketId)->where('wr_Id', $wid)->where('Tournament_Id', $tid)->delete();
         $this->renumberBracketPositions($tid, $currentBracketId);
 
@@ -218,10 +263,9 @@ class ManageBracketController extends Controller
         $division = Division::where('id', $currentGroup->Division_id)->where('Tournament_Id', $tid)->firstOrFail();
         $divisionNames = Division::where('Tournament_Id', $tid)->pluck('DivisionName', 'id');
         $wrestler = Wrestler::find($tw->Wrestler_Id);
-        $wrestlerGender = ($wrestler && $wrestler->wr_gender === 'Girl') ? 'girls' : 'boys';
-        $groupGenders = $wrestlerGender === 'girls' ? ['girls', 'coed'] : ['boys', 'coed'];
+        $wrestlerIsGirl = $wrestler && $wrestler->wr_gender === 'Girl';
         $groups = DivGroup::where('Tournament_Id', $tid)
-            ->whereIn('gender', $groupGenders)
+            ->when(! $wrestlerIsGirl, fn ($q) => $q->whereRaw('LOWER(TRIM(COALESCE(`gender`, ""))) != ?', ['girls']))
             ->where(function ($q) use ($currentGroup) {
                 $q->where('id', '!=', $currentGroup->id)
                     ->orWhere('Division_id', '!=', $currentGroup->Division_id);
@@ -269,10 +313,8 @@ class ManageBracketController extends Controller
 
         $tw = TournamentWrestler::where('id', $wid)->where('Tournament_id', $tid)->firstOrFail();
         $wrestler = Wrestler::find($tw->Wrestler_Id);
-        $wrestlerGender = ($wrestler && $wrestler->wr_gender === 'Girl') ? 'girls' : 'boys';
-        $allowedGenders = $wrestlerGender === 'girls' ? ['girls', 'coed'] : ['boys', 'coed'];
-        if (! in_array((string) $targetGroup->gender, $allowedGenders, true)) {
-            return redirect()->back()->with('error', 'The selected group does not match this wrestler\'s gender.');
+        if (! DivGroup::acceptsWrestlerProfileGender($wrestler->wr_gender ?? null, $targetGroup->gender)) {
+            return redirect()->back()->with('error', 'Boys cannot be moved to a girls-only group.');
         }
         $currentGroup = DivGroup::where('id', $tw->group_id)->where('Tournament_Id', $tid)->first();
         if ($currentGroup && (int) $currentGroup->id === (int) $targetGroup->id && (int) $currentGroup->Division_id === (int) $targetGroup->Division_id) {

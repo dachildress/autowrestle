@@ -59,6 +59,19 @@ class DivGroup extends Model
         return self::genderPrefix($this->gender) . ' ' . ($this->Name ?? 'Group ' . $this->id);
     }
 
+    /**
+     * Whether a wrestler may be placed in a group based on profile gender (bracketing / group moves).
+     * Girls may join boys, girls, or coed groups. Boys may not join girls-only groups.
+     */
+    public static function acceptsWrestlerProfileGender(?string $wrestlerWrGender, mixed $groupGender): bool
+    {
+        if (($wrestlerWrGender ?? '') === 'Girl') {
+            return true;
+        }
+
+        return strtolower(trim((string) ($groupGender ?? ''))) !== 'girls';
+    }
+
     /** Grade for display: -1 → "P" (Pre-K), 0 → "K" (Kindergarten), otherwise the number. */
     public static function gradeForDisplay(?int $grade): string
     {

@@ -115,7 +115,7 @@ class ViewGroupsController extends Controller
 
     /**
      * Show form for tournament director to edit a wrestler's info (tournament registration).
-     * Passes only groups that match the wrestler's gender (from base Wrestler profile).
+     * Passes groups allowed for this wrestler: girls may pick any group; boys cannot pick girls-only groups.
      */
     public function editWrestler(Request $request, int $tid, int $wid): View
     {
@@ -128,11 +128,10 @@ class ViewGroupsController extends Controller
             $did = $group ? $group->Division_id : null;
         }
         $wrestler = Wrestler::find($tw->Wrestler_Id);
-        $wrestlerGender = ($wrestler && $wrestler->wr_gender === 'Girl') ? 'girls' : 'boys';
-        $allowedGenders = $wrestlerGender === 'girls' ? ['girls', 'coed'] : ['boys', 'coed'];
+        $wrestlerIsGirl = $wrestler && $wrestler->wr_gender === 'Girl';
         $divisionNames = Division::where('Tournament_Id', $tid)->pluck('DivisionName', 'id');
         $allowedGroups = DivGroup::where('Tournament_Id', $tid)
-            ->whereIn('gender', $allowedGenders)
+            ->when(! $wrestlerIsGirl, fn ($q) => $q->whereRaw('LOWER(TRIM(COALESCE(`gender`, ""))) != ?', ['girls']))
             ->orderBy('Division_id')
             ->orderBy('Name')
             ->get()
@@ -152,7 +151,7 @@ class ViewGroupsController extends Controller
 
     /**
      * Update a tournament wrestler's info (tournament director).
-     * If group_id is provided, validates that the group matches the wrestler's gender.
+     * If group_id is provided, validates group vs wrestler gender (boys cannot use girls-only groups).
      */
     public function updateWrestler(Request $request, int $tid, int $wid): RedirectResponse
     {
@@ -183,12 +182,11 @@ class ViewGroupsController extends Controller
             $newGroup = DivGroup::where('id', $validated['group_id'])->where('Tournament_Id', $tid)->first();
             if ($newGroup) {
                 $wrestler = Wrestler::find($tw->Wrestler_Id);
-                $wrestlerGender = ($wrestler && $wrestler->wr_gender === 'Girl') ? 'girls' : 'boys';
-                $allowedGenders = $wrestlerGender === 'girls' ? ['girls', 'coed'] : ['boys', 'coed'];
-                if (in_array((string) $newGroup->gender, $allowedGenders, true)) {
-                    $tw->group_id = $newGroup->id;
-                    $tw->division_id = $newGroup->Division_id;
+                if (! DivGroup::acceptsWrestlerProfileGender($wrestler->wr_gender ?? null, $newGroup->gender)) {
+                    return redirect()->back()->withInput()->with('error', 'Boys cannot be assigned to a girls-only group.');
                 }
+                $tw->group_id = $newGroup->id;
+                $tw->division_id = $newGroup->Division_id;
             }
         }
 
