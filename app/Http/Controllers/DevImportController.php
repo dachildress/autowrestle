@@ -14,10 +14,27 @@ use Illuminate\Routing\Controller;
 class DevImportController extends Controller
 {
     /**
-     * Dev-only SQL dump used to seed users/wrestlers for local testing.
-     * Note: This is not executed as SQL; we parse the INSERT value rows and map into current schema.
+     * Resolved path to the SQL dump, or null if unavailable (cache-only mode).
+     * Note: dump is not executed as SQL; we parse INSERT value rows into the current schema.
      */
-    private string $sqlDumpPath = 'C:\\xampp\\htdocs\\dev\\importwrestlerandusers.sql';
+    private function resolveSqlDumpPath(): ?string
+    {
+        $configured = config('dev_import.sql_path');
+        if (is_string($configured)) {
+            $configured = trim($configured);
+            if ($configured !== '' && is_file($configured)) {
+                return $configured;
+            }
+        }
+
+        // Local convenience: dump next to the app root (e.g. dev/importwrestlerandusers.sql)
+        $fallback = dirname(base_path()) . DIRECTORY_SEPARATOR . 'importwrestlerandusers.sql';
+        if (app()->environment('local') && is_file($fallback)) {
+            return $fallback;
+        }
+
+        return null;
+    }
 
     private function getCachedSqlRows(string $table): array
     {
@@ -25,9 +42,11 @@ class DevImportController extends Controller
         $metaFile = $cacheDir . DIRECTORY_SEPARATOR . 'meta.json';
         $cacheFile = $cacheDir . DIRECTORY_SEPARATOR . $table . '.json';
 
-        $dumpMtime = file_exists($this->sqlDumpPath) ? filemtime($this->sqlDumpPath) : null;
+        $sqlPath = $this->resolveSqlDumpPath();
+        $dumpMtime = $sqlPath !== null ? filemtime($sqlPath) : null;
 
-        if ($dumpMtime !== null && file_exists($metaFile) && file_exists($cacheFile)) {
+        // SQL on disk: use cache when it matches dump modification time
+        if ($dumpMtime !== null && is_file($metaFile) && is_file($cacheFile)) {
             $meta = json_decode((string) file_get_contents($metaFile), true);
             if (is_array($meta) && isset($meta['mtime']) && (int) $meta['mtime'] === (int) $dumpMtime) {
                 $decoded = json_decode((string) file_get_contents($cacheFile), true);
@@ -35,15 +54,30 @@ class DevImportController extends Controller
             }
         }
 
-        if (! is_dir($cacheDir)) {
-            mkdir($cacheDir, 0755, true);
+        // SQL on disk: rebuild cache from dump
+        if ($sqlPath !== null && $dumpMtime !== null) {
+            if (! is_dir($cacheDir)) {
+                mkdir($cacheDir, 0755, true);
+            }
+
+            $rows = $this->parseSqlInsertRows($sqlPath, $table);
+            file_put_contents($cacheFile, json_encode($rows, JSON_UNESCAPED_SLASHES));
+            file_put_contents($metaFile, json_encode(['mtime' => $dumpMtime], JSON_UNESCAPED_SLASHES));
+
+            return $rows;
         }
 
-        $rows = $this->parseSqlInsertRows($this->sqlDumpPath, $table);
-        file_put_contents($cacheFile, json_encode($rows, JSON_UNESCAPED_SLASHES));
-        file_put_contents($metaFile, json_encode(['mtime' => $dumpMtime], JSON_UNESCAPED_SLASHES));
+        // No SQL (e.g. production): cache-only — no hard dependency on a dump path
+        if (is_file($cacheFile)) {
+            $decoded = json_decode((string) file_get_contents($cacheFile), true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
 
-        return $rows;
+        abort(503, 'Dev import has no data source on this server. '
+            . 'Set DEV_IMPORT_SQL_PATH to a valid dump file, or run import once locally so '
+            . 'storage/dev_import_cache/' . $table . '.json exists.');
     }
 
     /**
@@ -168,6 +202,9 @@ class DevImportController extends Controller
 
     public function importWrestlers(Request $request)
     {
+        if (! config('dev_import.enabled')) {
+            abort(404);
+        }
         if (! $this->requireAdmin($request)) {
             return $this->abort403();
         }

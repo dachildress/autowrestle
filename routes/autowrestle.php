@@ -60,11 +60,13 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/tournaments/{tid}/challenge-match/{challengeId}/accept', [\App\Http\Controllers\ChallengeMatchController::class, 'accept'])->name('challenge.accept')->where(['tid' => '[0-9]+', 'challengeId' => '[0-9]+']);
     Route::post('/tournaments/{tid}/challenge-match/{challengeId}/decline', [\App\Http\Controllers\ChallengeMatchController::class, 'decline'])->name('challenge.decline')->where(['tid' => '[0-9]+', 'challengeId' => '[0-9]+']);
 
-    // Dev-only imports (remove later)
-    Route::get('/dev/import/users', [\App\Http\Controllers\DevImportController::class, 'importUsers'])
-        ->name('dev.import.users');
-    Route::get('/dev/import/wrestler', [\App\Http\Controllers\DevImportController::class, 'importWrestlers'])
-        ->name('dev.import.wrestler');
+    // Dev-only imports: disabled in production unless DEV_IMPORT_ENABLED=true
+    if (config('dev_import.enabled')) {
+        Route::get('/dev/import/users', [\App\Http\Controllers\DevImportController::class, 'importUsers'])
+            ->name('dev.import.users');
+        Route::get('/dev/import/wrestler', [\App\Http\Controllers\DevImportController::class, 'importWrestlers'])
+            ->name('dev.import.wrestler');
+    }
 });
 
 require __DIR__.'/autowrestle_manage.php';
